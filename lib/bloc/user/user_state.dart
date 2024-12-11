@@ -4,16 +4,16 @@ abstract class UserState {
   const UserState();
 }
 
-class UserInitial extends UserState {}
+class UserInitialState extends UserState {}
 
-class UserLoading extends UserState {}
+class UserLoadingState extends UserState {}
 
-class UserLoaded extends UserState {
+class UserLoadedState extends UserState {
   final User user;
-  const UserLoaded(this.user);
+  const UserLoadedState(this.user);
 }
 
-class UserError extends UserState{
+class UserErrorState extends UserState{
   final String error;
-  const UserError(this.error);
+  const UserErrorState(this.error);
 }
