@@ -46,12 +46,6 @@ class _LoginPageState extends State<LoginPage> {
 
       // Handle login result
       if (user != null) {
-        String token = user.accessToken;
-
-        // Lưu token vào SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('access_token', token);
-
         // Successful login - navigate to next screen or perform action
         _showSuccessDialog('Login Successful');
 

@@ -21,7 +21,7 @@ class UserService {
       if (response.statusCode == 201) {
         final Map<String, dynamic> bodyContent = json.decode(response.body);
         if (bodyContent['resultCode'] == '00047') {
-          return User.fromJson(bodyContent);
+          return User.fromJson(bodyContent['user']);
         } else {
           print("Đăng nhập thất bại: ${bodyContent['resultMessage']['en']}");
         }
@@ -35,16 +35,19 @@ class UserService {
   }
 
   Future<User> getUserInfo() async {
+    final uri = Uri.parse("${baseUrl}/user");
     try {
       final response = await http.get(
-        Uri.parse('your_api_url/user/info'),
+        uri,
         headers: {
           'Authorization': 'Bearer ${await getToken()}',
         },
       );
 
       if (response.statusCode == 200) {
-        return User.fromJson(json.decode(response.body));
+        final Map<String, dynamic> bodyContent = json.decode(response.body);
+        final user = bodyContent['results'][0];
+        return User.fromJson(user);
       } else {
         throw Exception('Failed to load user info');
       }
