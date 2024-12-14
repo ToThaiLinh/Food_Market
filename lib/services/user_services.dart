@@ -21,6 +21,13 @@ class UserService {
       if (response.statusCode == 201) {
         final Map<String, dynamic> bodyContent = json.decode(response.body);
         if (bodyContent['resultCode'] == '00047') {
+          final accessToken = bodyContent['accessToken'];
+          final refreshToken = bodyContent['refreshToken'];
+
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('access_token', accessToken);
+          await prefs.setString('refresh_token', refreshToken);
+
           return User.fromJson(bodyContent['user']);
         } else {
           print("Đăng nhập thất bại: ${bodyContent['resultMessage']['en']}");
