@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food/ui/pages/login/register_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../gen/assets.gen.dart';
 import '../../../services/user_services.dart';
 import '../home/home_page.dart';
@@ -45,8 +46,15 @@ class _LoginPageState extends State<LoginPage> {
 
       // Handle login result
       if (user != null) {
+        String token = user.accessToken;
+
+        // Lưu token vào SharedPreferences
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', token);
+
         // Successful login - navigate to next screen or perform action
         _showSuccessDialog('Login Successful');
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => HomePage()),

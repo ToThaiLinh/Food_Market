@@ -20,7 +20,7 @@ class _HomePageState extends State<HomePage> {
     HomeContent(),
     ShoppingPage(),
     SchedulePage(),
-    MePage(),
+    MeView(),
   ];
 
   @override
