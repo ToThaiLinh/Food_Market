@@ -2,7 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:food/ui/pages/me/update_phone_page.dart';
 
+import '../../../models/user.dart';
+
 class UserInfoPage extends StatelessWidget {
+  final User user;
+
+  const UserInfoPage({Key? key, required this.user}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -16,7 +22,7 @@ class UserInfoPage extends StatelessWidget {
           children: [
             ListTile(
               title: Text('Tên đăng nhập'),
-              subtitle: Text('foodfamily_012'),
+              subtitle: Text("${user.username}"),
             ),
             ListTile(
               title: Text('Số điện thoại'),
@@ -31,21 +37,21 @@ class UserInfoPage extends StatelessWidget {
             ),
             ListTile(
               title: Text('Tên'),
-              subtitle: Text('Nguyen Van A'),
+              subtitle: Text('${user.name}'),
             ),
             ListTile(
               title: Text('Email'),
-              subtitle: Text('Cập nhật ngay'),
+              subtitle: Text(user.email.isNotEmpty ? user.email : 'Cập nhật ngay'),
               trailing: Icon(Icons.edit),
             ),
             ListTile(
               title: Text('Giới tính'),
-              subtitle: Text('Cập nhật ngay'),
+              subtitle: Text(user.gender!.isNotEmpty ? user.gender! : 'Cập nhật ngay'),
               trailing: Icon(Icons.edit),
             ),
             ListTile(
               title: Text('Ngày sinh'),
-              subtitle: Text('Cập nhật ngay'),
+              subtitle: Text(user.birthDate!.isNotEmpty ? user.birthDate! : 'Cập nhật ngay'),
               trailing: Icon(Icons.edit),
             ),
           ],

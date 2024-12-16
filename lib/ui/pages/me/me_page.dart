@@ -35,11 +35,36 @@ class MeView extends StatelessWidget {
           // } else if (state is UserErrorState) {
           //   return Center(child: Text(state.error));
           } else if (state is UserLoadedState) {
-            // final user = state.user;
-            return OverViewMePage();
-          } else {
-            // return Center(child: Text('Trạng thái không xác định')
-            return OverViewMePage();
+            final user = state.user;
+            return OverViewMePage(user : user);
+          }
+          // else if(state is UserErrorState) {
+          //   return Center(child: Text('Lỗi: ${state.error}'));
+          // }
+
+          else {
+            // return Center(child: Text('Trạng thái không xác định'));
+            User user = User(
+              id: '12345',
+              email: 'example@example.com',
+              password: 'password123',
+              username: 'exampleuser',
+              name: 'Example User',
+              type: 'admin',
+              language: 'en',
+              gender: 'male',
+              countryCode: 'US',
+              timezone: 3,
+              birthDate: '1990-01-01',
+              photoUrl: 'https://png.pngtree.com/element_our/png/20180918/chef-cooking-fried-chicken-and-delicious-sign-png_103460.jpg',
+              isActivated: true,
+              isVerified: true,
+              deviceId: 'device12345',
+              belongsToGroupAdminId: 1,
+              createdAt: DateTime.parse('2024-01-01T12:00:00Z'),
+              updatedAt: DateTime.parse('2024-12-01T12:00:00Z'),
+            );
+            return OverViewMePage(user : user);
           }
         },
       ),
@@ -49,7 +74,9 @@ class MeView extends StatelessWidget {
 
 
 class OverViewMePage extends StatelessWidget {
-  OverViewMePage();
+  final User user;
+
+  const OverViewMePage({Key? key, required this.user}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,16 +92,25 @@ class OverViewMePage extends StatelessWidget {
                   CircleAvatar(
                     radius: 40,
                     backgroundColor: Colors.grey[300],
-                    child: Icon(Icons.person, size: 40, color: Colors.white),
+                    child: user.photoUrl.isNotEmpty
+                        ? ClipOval(
+                            child: Image.network(
+                              user.photoUrl,
+                              width: 80,  // Đảm bảo kích thước hình ảnh phù hợp
+                              height: 80,
+                              fit: BoxFit.cover,  // Giữ tỷ lệ khung hình của hình ảnh
+                            ),
+                          )
+                        : Icon(Icons.person, size: 40, color: Colors.white),
                   ),
                   SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("user.username",
+                      Text(user.username,
                           style: TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold)),
-                      Text('Số điện thoại: ******012',
+                      Text('Email: ${user.email}',
                           style: TextStyle(color: Colors.grey[600])),
                     ],
                   )
@@ -91,7 +127,7 @@ class OverViewMePage extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => UserInfoPage()),
+                  MaterialPageRoute(builder: (context) => UserInfoPage(user:  user) ),
                 );
               },
             ),

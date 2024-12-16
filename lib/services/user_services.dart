@@ -42,7 +42,7 @@ class UserService {
   }
 
   Future<User> getUserInfo() async {
-    final uri = Uri.parse("${baseUrl}/user");
+    final uri = Uri.parse("${baseUrl}/auth/profile");
     try {
       final response = await http.get(
         uri,
@@ -53,7 +53,7 @@ class UserService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> bodyContent = json.decode(response.body);
-        final user = bodyContent['results'][0];
+        final user = bodyContent;
         return User.fromJson(user);
       } else {
         throw Exception('Failed to load user info');
