@@ -1,19 +1,16 @@
-import 'food.dart';
-
 class Recipe {
-  int id;
+  String id;
   String name;
   String description;
   String htmlContent;
-  Food food;
+  String foodId;
 
-  Recipe({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.htmlContent,
-    required this.food
-  });
+  Recipe(
+      {required this.id,
+      required this.name,
+      required this.description,
+      required this.htmlContent,
+      required this.foodId});
 
   factory Recipe.fromJson(Map<String, dynamic> json) {
     return Recipe(
@@ -21,7 +18,6 @@ class Recipe {
         name: json['name'],
         description: json['description'],
         htmlContent: json['htmlContent'],
-        food: Food.fromJson(json['food'])
-    );
+        foodId: json['foodId']);
   }
 }
