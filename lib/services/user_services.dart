@@ -83,6 +83,51 @@ class UserService {
     }
   }
 
+  Future<Map<String, dynamic>> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse('$_baseUrl/user/change-password');
+    final headers = {
+      'Authorization': 'Bearer ${getToken()}',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
+    final body = {
+      'oldPassword': oldPassword,
+      'newPassword': newPassword,
+    };
+
+    try {
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'resultMessage': data['resultMessage'],
+          'resultCode': data['resultCode'],
+        };
+      } else {
+        // Handle errors (non-200 status codes)
+        return {
+          'success': false,
+          'error':
+              'Failed to change password. Status code: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      // Handle exceptions
+      return {
+        'success': false,
+        'error': 'An error occurred: $e',
+      };
+    }
+  }
+
   Future<String> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('access_token');
