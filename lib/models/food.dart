@@ -1,34 +1,28 @@
 class Food {
   int id;
   String name;
-  String imageUrl;
-  String type;
-  int foodCategoryId;
-  String foodCategory;
-  int userId;
-  int unitOfMeasurementId;
+  //String imageUrl;
+  String unit;
+  String category;
+  String userIdCreate;
 
   Food({
     required this.id,
     required this.name,
-    required this.imageUrl,
-    required this.type,
-    required this.foodCategoryId,
-    required this.foodCategory,
-    required this.userId,
-    required this.unitOfMeasurementId,
+    //required this.imageUrl,
+    required this.unit,
+    required this.category,
+    required this.userIdCreate,
   });
 
   factory Food.fromJson(Map<String, dynamic> json) {
     return Food(
         id: json['id'],
         name: json['name'],
-        imageUrl: json['imageUrl'],
-        type: json['type'],
-        foodCategoryId: json['FoodCategoryId'],
-        foodCategory: json['FoodCategory']['name'],
-        userId: json['UserId'],
-        unitOfMeasurementId: json['UnitOfMeasurementId'],
+        // imageUrl: json['imageUrl'],
+        unit: json['unit'],
+        category: json['category'],
+        userIdCreate: json['userIdCreate']
     );
   }
 
