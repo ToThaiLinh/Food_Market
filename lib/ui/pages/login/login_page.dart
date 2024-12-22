@@ -6,6 +6,7 @@ import '../../../services/login_api_service.dart';
 import '../home/home_page.dart';
 
 String globalToken = '';
+String userId = '';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -41,6 +42,8 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       globalToken = user?.accessToken ?? '';
+      userId = user?.id ?? '';
+      print("UserId : $userId");
       print('Global Token: $globalToken');
 
       // Set loading state back to false

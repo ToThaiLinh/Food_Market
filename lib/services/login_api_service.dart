@@ -21,7 +21,7 @@ class LoginApiService {
         if (bodyContent['resultCode'] == '00047') {
           ///TODO: Lay accessToken tu response api va gan vao globalToken
           final user = User.fromJson(bodyContent);
-          accessToken = user.accessToken;
+          accessToken = user.accessToken!;
           print("Access token: $accessToken");
           return User.fromJson(bodyContent);
         } else {

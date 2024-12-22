@@ -10,33 +10,26 @@ import '../../../bloc/meal_plan/meal_plan_state.dart';
 import '../../../services/meal_plan_service.dart';
 
 
-// class SchedulePage extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return BlocProvider(
-//       create: (context) => MealPlanBloc(
-//         MealPlanService(),
-//       ),
-//       child: MaterialApp( // Hoặc một Navigator nếu cần
-//         home: ScheduleView(), // ScheduleView phải là con của BlocProvider
-//       ),
-//     );
-//   }
-// }
+class SchedulePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => MealPlanBloc(
+        MealPlanService(),
+      ),
+      child: ScheduleView(),
+    );
+  }
+}
 
-class SchedulePage extends StatefulWidget {
+class ScheduleView extends StatefulWidget {
   @override
   _SchedulePageState createState() => _SchedulePageState();
 }
 
-class _SchedulePageState extends State<SchedulePage> {
+class _SchedulePageState extends State<ScheduleView> {
   DateTime selectedDate = DateTime.now();
   DateTime focusedDate = DateTime.now();
-  final Map<String, String> mealTypeMapping = {
-    'Bữa sáng': 'breakfast',
-    'Bữa trưa': 'lunch',
-    'Bữa tối': 'dinner',
-  };
 
   @override
   void initState() {
@@ -77,7 +70,7 @@ class _SchedulePageState extends State<SchedulePage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddDishDialog(context, 'Bữa sáng'),
+        onPressed: () => _showAddDishDialog('Bữa sáng'),
         backgroundColor: Color(0xFFBF4E19),
         child: Icon(Icons.add, color: Colors.white),
         tooltip: 'Thêm món ăn',
@@ -120,11 +113,9 @@ class _SchedulePageState extends State<SchedulePage> {
             itemCount: mealTypes.length,
             itemBuilder: (context, index) {
               final mealType = mealTypes[index];
-
               final dishes = state.mealPlans
-                  .where((plan) => plan.name == mealTypeMapping[mealType])
+                  .where((plan) => plan.name == mealType)
                   .toList();
-
 
               return Card(
                 elevation: 4,
@@ -137,7 +128,6 @@ class _SchedulePageState extends State<SchedulePage> {
                     dividerColor: Colors.transparent,
                   ),
                   child: ExpansionTile(
-                    initiallyExpanded: true,
                     leading: Container(
                       padding: EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -201,7 +191,7 @@ class _SchedulePageState extends State<SchedulePage> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          onPressed: () => _showAddDishDialog(context, mealType),
+                          onPressed: () => _showAddDishDialog(mealType),
                         ),
                       ),
                     ],
@@ -217,7 +207,7 @@ class _SchedulePageState extends State<SchedulePage> {
     );
   }
 
-  void _showAddDishDialog(BuildContext context, String mealType) {
+  void _showAddDishDialog(String mealType) {
     final TextEditingController controller = TextEditingController();
 
     showDialog(
@@ -278,7 +268,7 @@ class _SchedulePageState extends State<SchedulePage> {
                             foodName: controller.text,
                             timestamp: DateFormat('yyyy-MM-dd')
                                 .format(selectedDate),
-                            name: mealTypeMapping[mealType]!,
+                            name: mealType,
                           ),
                         );
                         Navigator.pop(context);
@@ -363,7 +353,7 @@ class _SchedulePageState extends State<SchedulePage> {
             });
             context.read<MealPlanBloc>().add(
               GetMealPlansByDate(
-                date: DateFormat('MM/dd/yyyy').format(selectedDate),
+                date: DateFormat('yyyy-MM-dd').format(selectedDay),
               ),
             );
           },
