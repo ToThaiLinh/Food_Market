@@ -1,15 +1,16 @@
 import 'dart:convert';
 
+import 'package:food/config/configuration.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user.dart';
 
 class UserService {
-  final baseUrl = "http://10.0.2.2:8080/it4788";
+  final _baseUrl = AppConfig.baseUrl;
 
   Future<User?> login(String email, String password) async {
-    final uri = Uri.parse("${baseUrl}/auth/login");
+    final uri = Uri.parse("${_baseUrl}/auth/login");
     try {
       final response = await http.post(
         uri,
@@ -42,7 +43,7 @@ class UserService {
   }
 
   Future<User> getUserInfo() async {
-    final uri = Uri.parse("${baseUrl}/auth/profile");
+    final uri = Uri.parse("${_baseUrl}/auth/profile");
     try {
       final response = await http.get(
         uri,

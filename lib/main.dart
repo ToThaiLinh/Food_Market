@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:food/themes/theme_provider.dart';
 import 'package:food/ui/pages/login/login_page.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(FoodyMartApp());
+  runApp(ChangeNotifierProvider(
+      create: (context) => ThemeProvider(), child: FoodyMartApp()));
 }
 
 class FoodyMartApp extends StatelessWidget {
@@ -16,9 +19,7 @@ class FoodyMartApp extends StatelessWidget {
       minTextAdapt: true,
       child: MaterialApp(
         title: 'Foody Mart',
-        theme: ThemeData(
-          primaryColor: Colors.orange,
-        ),
+        theme: Provider.of<ThemeProvider>(context).themeData,
         home: LoginPage(),
       ),
     );

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:device_info_plus/device_info_plus.dart';
 
 class RegisterApiService {
   final String _baseUrl = 'http://10.0.2.2:8080/it4788/auth';
@@ -33,4 +34,26 @@ class RegisterApiService {
       throw Exception('Failed to register user');
     }
   }
+
+  /// Lấy DeviceID (hỗ trợ Android và iOS)
+  Future<String?> getDeviceID() async {
+    try {
+      DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+      final androidInfo = await deviceInfo.androidInfo;
+      final iosInfo = await deviceInfo.iosInfo;
+
+      if (androidInfo != null) {
+        return androidInfo.id; // Trả về Android ID
+      } else if (iosInfo != null) {
+        return iosInfo.identifierForVendor; // Trả về identifierForVendor trên iOS
+      } else {
+        return null; // Trường hợp không xác định
+      }
+    } catch (e) {
+      print('Error fetching device ID: $e');
+      return null;
+    }
+  }
+
+
 }
