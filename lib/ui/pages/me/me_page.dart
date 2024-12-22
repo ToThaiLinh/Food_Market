@@ -1,74 +1,108 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../../../services/user_api_service.dart';
 
 class MePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Tài khoản', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).primaryColor, // Sử dụng màu chủ đạo từ theme
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // User Info Section
-            Padding(
+            Container(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 40,
-                    backgroundColor: Colors.grey[300],
+                    backgroundColor: Theme.of(context).primaryColor,
                     child: Icon(Icons.person, size: 40, color: Colors.white),
                   ),
                   SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Username',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                      Text('Số điện thoại: ******012',
-                          style: TextStyle(color: Colors.grey[600])),
+                      Text(
+                        'Username',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Số điện thoại: ******012',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
                     ],
                   )
                 ],
               ),
             ),
             Divider(),
-
             // List Options
-            ListTile(
-              leading: Icon(Icons.person),
-              title: Text('Thông tin người dùng'),
-              trailing: Icon(Icons.arrow_forward_ios),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => UserInfoPage()),
-                );
-              },
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: ListTile(
+                leading: Icon(Icons.person, color: Theme.of(context).primaryColor),
+                title: Text('Thông tin người dùng'),
+                trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => UserInfoPage()),
+                  );
+                },
+              ),
             ),
-            ListTile(
-              leading: Icon(Icons.lock),
-              title: Text('Đổi mật khẩu'),
-              trailing: Icon(Icons.arrow_forward_ios),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ChangePasswordPage()),
-                );
-              },
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: ListTile(
+                leading: Icon(Icons.lock, color: Theme.of(context).primaryColor),
+                title: Text('Đổi mật khẩu'),
+                trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ChangePasswordPage()),
+                  );
+                },
+              ),
             ),
-            ListTile(
-              leading: Icon(Icons.history),
-              title: Text('Lịch sử mua sắm'),
-              trailing: Icon(Icons.arrow_forward_ios),
-              onTap: () {},
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: ListTile(
+                leading: Icon(Icons.history, color: Theme.of(context).primaryColor),
+                title: Text('Lịch sử mua sắm'),
+                trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  // Navigator.push(
+                  //   context,
+                  //   MaterialPageRoute(builder: (context) => ChangePasswordPage()),
+                  // );
+                },
+              ),
             ),
-            ListTile(
-              leading: Icon(Icons.group_add),
-              title: Text('Mời bạn bè'),
-              trailing: Icon(Icons.arrow_forward_ios),
-              onTap: () {},
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: ListTile(
+                leading: Icon(Icons.group_add, color: Theme.of(context).primaryColor),
+                title: Text('Mời bạn bè'),
+                trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  // Navigator.push(
+                  //   context,
+                  //   MaterialPageRoute(builder: (context) => ChangePasswordPage()),
+                  // );
+                },
+              ),
             ),
 
             // Logout Button
@@ -78,6 +112,9 @@ class MePage extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   minimumSize: Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 onPressed: () {
                   showDialog(
@@ -105,7 +142,14 @@ class MePage extends StatelessWidget {
                     },
                   );
                 },
-                child: Text('Đăng xuất', style: TextStyle(color: Colors.white)),
+                child: Text(
+                  'Đăng xuất',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
@@ -209,7 +253,57 @@ class UpdatePhonePage extends StatelessWidget {
 }
 
 // Change Password Page
-class ChangePasswordPage extends StatelessWidget {
+class ChangePasswordPage extends StatefulWidget {
+  @override
+  _ChangePasswordPageState createState() => _ChangePasswordPageState();
+}
+
+class _ChangePasswordPageState extends State<ChangePasswordPage> {
+  final _oldPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _userApiService = UserApiService();
+  bool _isLoading = false;
+
+  Future<void> _changePassword() async {
+    if (_newPasswordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Mật khẩu mới không khớp')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await _userApiService.changePassword(
+        oldPassword: _oldPasswordController.text,
+        newPassword: _newPasswordController.text,
+      );
+
+      if (result != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Đổi mật khẩu thành công')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đổi mật khẩu thất bại: ${e.toString()}')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _oldPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -222,6 +316,7 @@ class ChangePasswordPage extends StatelessWidget {
         child: Column(
           children: [
             TextField(
+              controller: _oldPasswordController,
               decoration: InputDecoration(
                 labelText: 'Mật khẩu hiện tại',
                 border: OutlineInputBorder(),
@@ -230,6 +325,7 @@ class ChangePasswordPage extends StatelessWidget {
             ),
             SizedBox(height: 16),
             TextField(
+              controller: _newPasswordController,
               decoration: InputDecoration(
                 labelText: 'Mật khẩu mới',
                 border: OutlineInputBorder(),
@@ -238,6 +334,7 @@ class ChangePasswordPage extends StatelessWidget {
             ),
             SizedBox(height: 16),
             TextField(
+              controller: _confirmPasswordController,
               decoration: InputDecoration(
                 labelText: 'Nhập lại mật khẩu mới',
                 border: OutlineInputBorder(),
@@ -250,8 +347,10 @@ class ChangePasswordPage extends StatelessWidget {
                 backgroundColor: Colors.orange,
                 minimumSize: Size(double.infinity, 50),
               ),
-              onPressed: () {},
-              child: Text('Lưu', style: TextStyle(color: Colors.white)),
+              onPressed: _isLoading ? null : _changePassword,
+              child: _isLoading
+                  ? CircularProgressIndicator(color: Colors.white)
+                  : Text('Lưu', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),

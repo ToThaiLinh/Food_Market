@@ -121,6 +121,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       onPressed: () {
                         print('Button Pressed');
                         _performRegistration();
+                        // _showVerificationDialog();
                       },
                       child: Text(
                         'Đăng Ký',
@@ -147,8 +148,18 @@ class _RegisterPageState extends State<RegisterPage> {
     String username = _usernameController.text;
     String password = _passwordController.text;
 
+    // Validate inputs
+    if (name.isEmpty || email.isEmpty || username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Vui lòng điền đầy đủ thông tin')),
+      );
+      return;
+    }
+
     try {
       RegisterApiService apiService = RegisterApiService();
+
+      // Gửi yêu cầu đăng ký và nhận response
       Map<String, dynamic> response = await apiService.registerUser(
         name: name,
         email: email,
@@ -156,18 +167,92 @@ class _RegisterPageState extends State<RegisterPage> {
         password: password,
       );
 
-      // Handle the response as needed
-      print('Registration successful: $response');
-    } catch (e) {
-      // Handle the error
-      print('Registration failed: $e');
-    }
+      // Debug log
+      print('Full register response: $response');
+      // print('Response status code: ${response['statusCode']}');
 
-    // Add your registration validation and submission logic here
-    print('Name: $name');
-    print('Email: $email');
-    print('Username: $username');
-    print('Password: $password');
+      // Kiểm tra response
+      if (response['statusCode'] == 200 || response['statusCode'] == 201) {
+        // Hiển thị dialog nhập mã xác thực
+        final verificationCode = await _showVerificationDialog();
+        print('Verification code: $verificationCode');
+
+        if (verificationCode != null && verificationCode.isNotEmpty) {
+          // Lấy id từ response
+          if (response['data'] != null && response['data']['_id'] != null) {
+            String userId = response['data']['_id'];
+
+            // Gửi mã xác thực lên server
+            final verificationResponse = await apiService.verifyEmail(
+              id: userId,
+              code: verificationCode,
+            );
+
+            if (verificationResponse['statusCode'] == 200 || verificationResponse['statusCode'] == 201) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Đăng ký thành công')),
+              );
+              Navigator.pop(context);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Mã xác thực không đúng')),
+              );
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Lỗi: Không tìm thấy ID người dùng')),
+            );
+          }
+        }
+      } else {
+        throw Exception(response['message'] ?? 'Đăng ký thất bại');
+      }
+    } catch (e) {
+      print('Error during registration: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đăng ký thất bại: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<String?> _showVerificationDialog() {
+    final codeController = TextEditingController();
+
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Xác thực email'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Vui lòng nhập mã xác thực đã được gửi đến email của bạn'),
+              SizedBox(height: 16),
+              TextField(
+                controller: codeController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                decoration: InputDecoration(
+                  labelText: 'Mã xác thực',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Hủy'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: Text('Xác nhận'),
+              onPressed: () => Navigator.of(context).pop(codeController.text),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override

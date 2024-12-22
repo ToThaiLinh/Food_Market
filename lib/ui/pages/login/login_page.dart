@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food/ui/pages/login/register_page.dart';
 import '../../../gen/assets.gen.dart';
-import '../../../services/user_services.dart';
+import '../../../services/login_api_service.dart';
 import '../home/home_page.dart';
+
+String globalToken = '';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,7 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _obscureText = true;
   bool _isLoading = false; // Added to manage loading state
-  final UserService _userService = UserService(); // Create an instance of UserService
+  final LoginApiService _userService = LoginApiService(); // Create an instance of UserService
 
   void _performLogin() async {
     // Validate input fields
@@ -37,6 +39,9 @@ class _LoginPageState extends State<LoginPage> {
           _usernameController.text.trim(),
           _passwordController.text.trim()
       );
+
+      globalToken = user?.accessToken ?? '';
+      print('Global Token: $globalToken');
 
       // Set loading state back to false
       setState(() {
@@ -178,7 +183,7 @@ class _LoginPageState extends State<LoginPage> {
                             : TextButton(
                           onPressed: _performLogin,
                           child: Text(
-                            'Login Now',
+                            'Đăng nhập',
                             style: TextStyle(
                               fontSize: 16.sp,
                               fontWeight: FontWeight.w700,
@@ -226,3 +231,4 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 }
+

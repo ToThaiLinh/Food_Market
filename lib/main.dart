@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food/ui/pages/login/login_page.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-void main() {
-  runApp(FoodyMartApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('vi_VN', null);
+
+  runApp(const FoodyMartApp());
 }
 
 class FoodyMartApp extends StatelessWidget {
@@ -19,7 +23,7 @@ class FoodyMartApp extends StatelessWidget {
         theme: ThemeData(
           primaryColor: Colors.orange,
         ),
-        home: LoginPage(),
+        home: const LoginPage(),
       ),
     );
   }
