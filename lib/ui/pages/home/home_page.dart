@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../bloc/meal_plan/meal_plan_bloc.dart';
 import '../../../gen/assets.gen.dart';
+import '../../../services/meal_plan_service.dart';
 import '../me/me_page.dart';
 import '../schedule/schedule_page.dart';
 import '../shopping/shopping_page.dart';
 import '../fridge/fridge_page.dart';
+
 
 class HomePage extends StatefulWidget {
   @override
