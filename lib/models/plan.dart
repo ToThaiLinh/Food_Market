@@ -5,7 +5,7 @@ class MealPlan {
   final String name;
   final String timestamp;
   final String status;
-  final Food food;
+  final Food? food;
   final String userId;
 
   MealPlan({
@@ -13,7 +13,7 @@ class MealPlan {
     required this.name,
     required this.timestamp,
     required this.status,
-    required this.food,
+    this.food,
     required this.userId,
   });
 
@@ -23,7 +23,7 @@ class MealPlan {
       name: json['name'] ?? "",
       timestamp: json['timestamp'] ?? "",
       status: json['status'] ?? "",
-      food: Food.fromJson(json['foodId']),
+      food: Food.fromJson(json['foodId']) ?? null,
       userId: json['userId'] ?? "",
     );
   }

@@ -5,10 +5,10 @@ import '../ui/pages/login/login_page.dart';
 
 class MealPlanService {
   final String apiUrl = "http://10.0.2.2:8080/it4788/meal"; // API endpoint
-  //final String token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhdmluaHBodW9jQGdtYWlsLmNvbSIsInN1YiI6IjY3MGZlZjhkNmVmNjlhMDM3MWQ5MjUzNiIsImlhdCI6MTczNDg4ODQ2NywiZXhwIjoxNzY2NDI0NDY3fQ.C0sVBzyShiqmgGfmbgo02BSkWGaaaOvS5iVNIAPZUuE";
+  // final String token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhdmluaHBodW9jQGdtYWlsLmNvbSIsInN1YiI6IjY3MGZlZjhkNmVmNjlhMDM3MWQ5MjUzNiIsImlhdCI6MTczNDkyNzg3OCwiZXhwIjoxNzY2NDYzODc4fQ.ht0hi2NiknBjQYlO0IOAdhvioT0Xb84KGOmTdsAjaCc";
 
   // Function to create a meal plan
-  Future<MealPlan> createMealPlan({
+  Future<MealPlan?> createMealPlan({
     required String foodName,
     required String timestamp,
     required String name,
@@ -34,21 +34,25 @@ class MealPlanService {
         body: body,
       );
 
-      if (response.statusCode == 201) {
-        // Parse response nếu request thành công
+      if (response.statusCode == 201 || response.statusCode == 200) {
         Map<String, dynamic> responseData = json.decode(response.body);
-
         // Lấy phần newPlan từ response và chuyển thành đối tượng MealPlan
         Map<String, dynamic> newPlanData = responseData['newPlan'];
+        print(newPlanData);
         MealPlan mealPlan = MealPlan.fromJson(newPlanData);
 
         return mealPlan;
-      } else {
+      }
+      else if (response.statusCode == 500) {
+        throw Exception("Food not found in database.");
+      }
+      else {
         // Xử lý lỗi nếu request không thành công
         throw Exception("Failed to create meal plan. Status code: ${response.statusCode}");
       }
     } catch (e) {
       // Xử lý ngoại lệ nếu có lỗi
+      print("lõi đây này");
       throw Exception("Error occurred: $e");
     }
   }

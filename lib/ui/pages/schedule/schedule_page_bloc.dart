@@ -167,7 +167,7 @@ class _SchedulePageState extends State<ScheduleView> {
                             color: Colors.grey[600],
                           ),
                           title: Text(
-                            plan.food.name,
+                            plan.food!.name,
                             style: TextStyle(fontSize: 16),
                           ),
                           trailing: IconButton(

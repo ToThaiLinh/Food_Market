@@ -35,27 +35,37 @@ class FoodyMartApp extends StatelessWidget {
   }
 }
 
-// import 'package:food/services/meal_plan_service.dart';
+// import 'dart:async';
 //
-// import '../models/plan.dart';
+// import 'package:intl/intl.dart';
+//
+// import 'services/meal_plan_service.dart';
+// import 'models/plan.dart';
 //
 // void main() async {
+//   // Tạo một instance của MealPlanService
 //   MealPlanService mealPlanService = MealPlanService();
 //
-//   // Ngày cần lấy dữ liệu
-//   String date = "12/2/2024";
+//   // Thông tin cần thiết để tạo meal plan
+//   String foodName = "Chicken";
+//   String timestamp = DateFormat('yyyy-MM-dd').format(DateTime.now()); // Sử dụng thời gian hiện tại
+//   String name = "lunch";
 //
 //   try {
-//     // Gọi phương thức getMealPlanByDate
-//     List<MealPlan> mealPlans = await mealPlanService.getMealPlanByDate(date: date);
+//     // Gọi hàm createMealPlan từ service
+//     MealPlan? mealPlan = await mealPlanService.createMealPlan(
+//       foodName: foodName,
+//       timestamp: timestamp,
+//       name: name,
+//     );
 //
-//     // In ra console danh sách MealPlan
-//     print("Meal plans for date $date:");
-//     for (var plan in mealPlans) {
-//       print("Name: ${plan.name}, Food: ${plan.food.name}, Timestamp: ${plan.timestamp}");
-//     }
+//     // In thông tin meal plan được tạo ra
+//     print("Meal Plan created successfully:");
+//     print("Name: ${mealPlan!.name}");
+//     print("Food Name: ${mealPlan.food?.name}");
+//     print("Timestamp: ${mealPlan.timestamp}");
 //   } catch (e) {
-//     // In ra lỗi nếu xảy ra
-//     print("Lỗi rồi : $e");
+//     // Xử lý lỗi nếu có
+//     print("Error creating meal plan: $e");
 //   }
 // }

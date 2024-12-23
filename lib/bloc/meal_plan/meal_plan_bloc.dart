@@ -26,7 +26,11 @@ class MealPlanBloc extends Bloc<MealPlanEvent, MealPlanState> {
         timestamp: event.timestamp,
         name: event.name,
       );
-      emit(MealPlanCreated(mealPlan));
+      if (mealPlan == null) {
+        emit(MealPlanError("Không có food trong csdl"));
+      } else {
+        emit(MealPlanCreated(mealPlan));
+      }
     } catch (e) {
       emit(MealPlanError(e.toString()));
     }
