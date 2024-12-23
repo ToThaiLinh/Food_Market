@@ -137,6 +137,7 @@ class _SchedulePageState extends State<SchedulePage> {
                     dividerColor: Colors.transparent,
                   ),
                   child: ExpansionTile(
+                    initiallyExpanded: true,
                     leading: Container(
                       padding: EdgeInsets.all(8),
                       decoration: BoxDecoration(
