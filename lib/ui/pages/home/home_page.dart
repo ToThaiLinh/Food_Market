@@ -1,9 +1,13 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../gen/assets.gen.dart';
+import '../../../services/recipe_api_service.dart';
 import '../me/me_page.dart';
+import '../recipe/create_recipe_page.dart';
 import '../schedule/schedule_page.dart';
 import '../shopping/shopping_page.dart';
 import '../fridge/fridge_page.dart';
+import '../recipe/meal_recipe_page.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -12,6 +16,27 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
+  List<Map<String, dynamic>> _recipes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRecipes();
+  }
+
+  Future<void> _fetchRecipes() async {
+    final RecipeApiService apiService = RecipeApiService();
+    List<Map<String, dynamic>>? recipes = await apiService.getAllRecipes();
+    print('Fetched Recipes: $recipes'); // In ra danh sách công thức
+    if (recipes != null) {
+      setState(() {
+        _recipes = recipes;
+      });
+    } else {
+      print('No recipes found or error occurred'); // Thông báo nếu không có công thức
+    }
+  }
+
   void _navigateToTab(int index) {
     setState(() {
       _currentIndex = index;
@@ -21,7 +46,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
-      HomeContent(onNavigateToTab: (index) => _navigateToTab(index)),
+      HomeContent(onNavigateToTab: (index) => _navigateToTab(index), recipes: _recipes),
       ShoppingPage(),
       FridgePage(),
       SchedulePage(),
@@ -31,11 +56,6 @@ class _HomePageState extends State<HomePage> {
         automaticallyImplyLeading: false,
         title: Row(
           children: [
-            // Image.asset(
-            //   Assets.images.imgLogo.path,
-            //   height: 32,
-            // ),
-            SizedBox(width: 8),
             Text(
               'Foody Mart',
               style: TextStyle(
@@ -71,54 +91,53 @@ class _HomePageState extends State<HomePage> {
         elevation: 0,
       ),
       body: pages[_currentIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: Offset(0, -5),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          items: [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: 'Trang chủ',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_cart_outlined),
-              activeIcon: Icon(Icons.shopping_cart),
-              label: 'Mua sắm',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.kitchen_outlined),
-              activeIcon: Icon(Icons.kitchen),
-              label: 'Tủ lạnh',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_today_outlined),
-              activeIcon: Icon(Icons.calendar_today),
-              label: 'Lịch',
-            ),
-          ],
-          currentIndex: _currentIndex,
-          selectedItemColor: Color(0xFF16A34A),
-          unselectedItemColor: Colors.grey,
-          showUnselectedLabels: true,
-          type: BottomNavigationBarType.fixed,
-          onTap: _navigateToTab,
-        ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Trang chủ',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart_outlined),
+            activeIcon: Icon(Icons.shopping_cart),
+            label: 'Mua sắm',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.kitchen_outlined),
+            activeIcon: Icon(Icons.kitchen),
+            label: 'Tủ lạnh',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_outlined),
+            activeIcon: Icon(Icons.calendar_today),
+            label: 'Lịch',
+          ),
+        ],
+        currentIndex: _currentIndex,
+        selectedItemColor: Color(0xFF16A34A),
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        onTap: _navigateToTab,
       ),
     );
   }
 }
 
-class HomeContent extends StatelessWidget {
+class HomeContent extends StatefulWidget {
   final Function(int) onNavigateToTab;
-  const HomeContent({super.key, required this.onNavigateToTab});
+  final List<Map<String, dynamic>> recipes;
+
+  const HomeContent({super.key, required this.onNavigateToTab, required this.recipes});
+
+  @override
+  State<HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<HomeContent> {
+  List<Map<String, dynamic>> get recipes => widget.recipes;
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -128,7 +147,7 @@ class HomeContent extends StatelessWidget {
           _buildWelcomeHeader(),
           _buildQuickActions(context),
           _buildExpiringFoods(),
-          _buildSuggestedMeals(),
+          _buildMealRecipes(context),
           _buildShoppingList(),
         ],
       ),
@@ -191,33 +210,33 @@ class HomeContent extends StatelessWidget {
             crossAxisSpacing: 16,
             childAspectRatio: 1.5,
             children: [
-            _buildActionCard(
-            title: 'Thêm đồ\nmua sắm',
-            icon: Icons.add_shopping_cart,
-            color: Color(0xFFF59E0B),
-            onTap: () => onNavigateToTab(1),
-          ),
-        _buildActionCard(
-          title: 'Kiểm tra\ntủ lạnh',
-          icon: Icons.kitchen,
-          color: Color(0xFF3B82F6),
-          onTap: () => onNavigateToTab(2),
-        ),
-        _buildActionCard(
-          title: 'Lên thực đơn',
-          icon: Icons.restaurant_menu,
-          color: Color(0xFFEF4444),
-          onTap: () => onNavigateToTab(3),
-        ),
-        _buildActionCard(
-          title: 'Chia sẻ\ngia đình',
-          icon: Icons.group_add,
-          color: Color(0xFF8B5CF6),
-          onTap: () {
-            // Keep empty for now as there's no share family page yet
-          },
-        ),
-      ],
+              _buildActionCard(
+                title: 'Thêm đồ\nmua sắm',
+                icon: Icons.add_shopping_cart,
+                color: Color(0xFFF59E0B),
+                onTap: () => widget.onNavigateToTab(1),
+              ),
+              _buildActionCard(
+                title: 'Kiểm tra\ntủ lạnh',
+                icon: Icons.kitchen,
+                color: Color(0xFF3B82F6),
+                onTap: () => widget.onNavigateToTab(2),
+              ),
+              _buildActionCard(
+                title: 'Lên thực đơn',
+                icon: Icons.restaurant_menu,
+                color: Color(0xFFEF4444),
+                onTap: () => widget.onNavigateToTab(3),
+              ),
+              _buildActionCard(
+                title: 'Chia sẻ\ngia đình',
+                icon: Icons.group_add,
+                color: Color(0xFF8B5CF6),
+                onTap: () {
+                  // Placeholder for sharing family page
+                },
+              ),
+            ],
           ),
         ],
       ),
@@ -277,7 +296,7 @@ class HomeContent extends StatelessWidget {
             height: 120,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: 5,
+              itemCount: 5, // Placeholder item count
               itemBuilder: (context, index) {
                 return Container(
                   width: 200,
@@ -317,70 +336,124 @@ class HomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildSuggestedMeals() {
+  Widget _buildMealRecipes(BuildContext context) {
     return Padding(
       padding: EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Gợi ý hôm nay',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Gợi ý hôm nay',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CreateRecipePage(),
+                    ),
+                  ).then((_) {
+                    // Refresh recipe list after creation
+                    if (mounted) {
+                      setState(() {
+                        widget.onNavigateToTab(0);
+                      });
+                    }
+                  });
+                },
+                child: Text('Thêm công thức'),
+              ),
+            ],
           ),
           SizedBox(height: 16),
           Container(
             height: 200,
-            child: ListView.builder(
+            child: recipes.isEmpty
+                ? Center(
+              child: Text('Chưa có công thức nào'),
+            )
+                : ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: 5,
+              itemCount: recipes.length,
               itemBuilder: (context, index) {
-                return Container(
-                  width: 160,
-                  margin: EdgeInsets.only(right: 16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    image: DecorationImage(
-                      image: AssetImage(Assets.images.imgMonan1.path),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+                final recipe = recipes[index];
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MealRecipePage(
+                          mealName: recipe['name'] ?? '',
+                          recipeDetails: recipe['description'] ?? '',
+                          cookingTime: '20 phút',
+                        ),
+                      ),
+                    );
+                  },
                   child: Container(
+                    width: 160,
+                    margin: EdgeInsets.only(right: 16),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.7),
-                        ],
+                      image: DecorationImage(
+                        image: AssetImage(Assets.images.imgMonan1.path),
+                        fit: BoxFit.cover,
                       ),
                     ),
-                    padding: EdgeInsets.all(12),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Bò xào nấm',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.7),
+                          ],
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          '20 phút',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 12,
+                      ),
+                      padding: EdgeInsets.all(12),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            recipe['name'] ?? '',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                          SizedBox(height: 4),
+                          Text(
+                            recipe['description'] ?? '',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 12,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            '20 phút',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );

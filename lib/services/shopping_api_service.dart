@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:food/ui/pages/login/login_page.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ShoppingApiService {
   String accessToken = '';
@@ -27,25 +28,36 @@ class ShoppingApiService {
       );
 
       print('Response Body: ${response.body}');
+      print('Status Code: ${response.statusCode}');
+
+      // Parse response body
+      final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        // Truy cập _id từ đối tượng food
-        return data['food']['_id']; // Sửa ở đây
+        // Check if food object exists in response
+        if (data['food'] != null && data['food']['_id'] != null) {
+          return data['food']['_id'];
+        } else {
+          print('Invalid response format: ${response.body}');
+          return null;
+        }
       } else {
-        throw Exception('Failed to create food');
+        print('Error response: ${response.body}');
+        return null;
       }
+
     } catch (err) {
       print('Detailed Error: $err');
       return null;
     }
   }
 
-  Future<String?> updateFood({
+  Future<Map<String, dynamic>?> updateFood({
     required String name,
     required String category,
     required String unit,
     required String id,
+    required String userIdCreate,
     required int quantity,
   }) async {
     final url = Uri.parse('$_baseUrl/food');
@@ -62,6 +74,7 @@ class ShoppingApiService {
           'category': category,
           'unit': unit,
           'id': id,
+          'userIdCreate': userIdCreate,
           'quantity': quantity.toString(),
         },
       );
@@ -71,14 +84,29 @@ class ShoppingApiService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        // Kiểm tra cấu trúc data
         print('Decoded response data: $data');
 
-        if (data['_id'] != null) {
-          // Xử lý trường hợp ID là object MongoDB
-          return data['_id']['\$oid'] ?? data['_id'].toString();
+        if (data['food'] != null) {
+          try {
+            // Lưu quantity vào SharedPreferences
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setInt('food_quantity_${data['food']['_id']}', quantity);
+            print('Saved quantity ${quantity} for food ${data['food']['_id']}');
+
+            // Trả về toàn bộ object food với quantity
+            return {
+              ...data['food'],
+              'quantity': quantity
+            };
+          } catch (e) {
+            print('Error saving to SharedPreferences: $e');
+            // Vẫn trả về dữ liệu ngay cả khi không lưu được vào SharedPreferences
+            return {
+              ...data['food'],
+              'quantity': quantity
+            };
+          }
         }
-        return data['id']?.toString(); // Fallback nếu ID ở dạng khác
       }
       return null;
     } catch (err) {
@@ -87,10 +115,10 @@ class ShoppingApiService {
     }
   }
 
-  Future<String?> deleteFood({
+  Future<bool> deleteFood({
     required String id,
   }) async {
-    final url = Uri.parse('$_baseUrl/food');
+    final url = Uri.parse('$_baseUrl/food/$id');
     try {
       final response = await http.delete(
         url,
@@ -103,34 +131,39 @@ class ShoppingApiService {
         },
       );
 
-      print('Response Body: ${response.body}');
+      print('Delete Response Body: ${response.body}');
+      print('Delete Status Code: ${response.statusCode}');
 
+      // Parse response body để kiểm tra message
+      final responseData = jsonDecode(response.body);
+      print('Delete Response Data: $responseData');
+
+      // Kiểm tra cả status code và message từ API
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        return data['_id']['\$oid'];
+        print('Delete operation successful');
+        return true;
       } else {
-        throw Exception('Failed to delete food');
+        print('Delete operation failed with status: ${response.statusCode}');
+        return false;
       }
     } catch (err) {
-      print('Detailed Error: $err');
-      return null;
+      print('Delete Error: $err');
+      return false;
     }
   }
 
   Future<List<Map<String, dynamic>>?> getAllFoods() async {
-    final url = Uri.parse('$_baseUrl/food');
+    final url = Uri.parse('$_baseUrl/food?current=1&pageSize=100');
     try {
       final response = await http.get(
         url,
         headers: {
           'Authorization': 'Bearer $globalToken',
-          // Thêm header để tăng giới hạn kích thước response
           'Accept-Encoding': 'gzip, deflate, br',
         },
       );
 
-      if (response.statusCode == 200) {
-        // Chuyển đổi response body thành UTF8 để đảm bảo đọc đúng
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final String responseBody = utf8.decode(response.bodyBytes);
         print('Full Response Body Length: ${responseBody.length}');
 
@@ -140,12 +173,31 @@ class ShoppingApiService {
           final List<dynamic> foodList = data['food'] as List;
           print('Number of foods in response: ${foodList.length}');
 
-          final List<Map<String, dynamic>> foods = foodList
-              .map((item) => item as Map<String, dynamic>)
-              .toList();
+          try {
+            // Đọc dữ liệu quantity từ local storage
+            final prefs = await SharedPreferences.getInstance();
 
-          print('Number of processed foods: ${foods.length}');
-          return foods;
+            final List<Map<String, dynamic>> foods = foodList.map((item) {
+              final foodId = item['_id'].toString();
+              // Lấy quantity từ SharedPreferences, mặc định là 0 nếu chưa có
+              final quantity = prefs.getInt('food_quantity_$foodId') ?? 0;
+
+              return {
+                ...item as Map<String, dynamic>,
+                'quantity': quantity, // Thêm quantity vào mỗi item
+              };
+            }).toList();
+
+            print('Number of processed foods: ${foods.length}');
+            return foods;
+          } catch (e) {
+            print('Error accessing SharedPreferences: $e');
+            // Nếu không thể truy cập SharedPreferences, vẫn trả về danh sách với quantity = 0
+            return foodList.map((item) => {
+              ...item as Map<String, dynamic>,
+              'quantity': 0,
+            }).toList();
+          }
         } else {
           print('Invalid data structure: ${data.keys}');
           return null;

@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../../../services/shopping_api_service.dart';
@@ -24,23 +27,34 @@ class _ShoppingPageState extends State<ShoppingPage> {
     _loadShoppingItems(); // Hiển thị tất cả item ban đầu
   }
 
+  Future<void> _saveShoppingItems() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String shoppingItemsJson = jsonEncode(shoppingItems);
+      await prefs.setString('shopping_items', shoppingItemsJson);
+      print('Saved shopping items: $shoppingItemsJson');
+    } catch (e) {
+      print('Error saving shopping items: $e');
+    }
+  }
+
   Future<void> _loadShoppingItems() async {
     try {
-      final items = await _apiService.getAllFoods();
-      if (items != null) {
-        setState(() {
-          shoppingItems = items;
-        });
+      final prefs = await SharedPreferences.getInstance();
+      final String? shoppingItemsJson = prefs.getString('shopping_items');
+
+      if (shoppingItemsJson != null) {
+        final List<dynamic> decodedItems = jsonDecode(shoppingItemsJson);
+        if (mounted) {
+          setState(() {
+            shoppingItems = decodedItems.cast<Map<String, dynamic>>();
+          });
+        }
+        print('Loaded shopping items: $shoppingItems');
       }
     } catch (e) {
       print('Error loading shopping items: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Có lỗi khi tải danh sách thực phẩm')),
-      );
     }
-    // setState(() {
-    //   shoppingItems = []; // Khởi tạo shoppingItems là rỗng
-    // });
   }
 
   void _addItem(Map<String, dynamic> item) async {
@@ -51,8 +65,8 @@ class _ShoppingPageState extends State<ShoppingPage> {
         category: item['category'] ?? 'Uncategorized',
         unit: item['unit'] ?? '',
         id: item['id'] ?? '',
-        // ID có thể để trống nếu là thực phẩm mới
         quantity: item['quantity'] ?? 0,
+        userIdCreate: item['userIdCreate'] ?? '',
       );
 
       if (result != null) {
@@ -81,7 +95,6 @@ class _ShoppingPageState extends State<ShoppingPage> {
   }
 
   void _removeItem(int index) async {
-    // Kiểm tra index có hợp lệ không
     if (index < 0 || index >= shoppingItems.length) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Không tìm thấy thực phẩm để xóa')),
@@ -90,18 +103,11 @@ class _ShoppingPageState extends State<ShoppingPage> {
     }
 
     final item = shoppingItems[index];
+    final itemId = item['_id'];
 
-    // Kiểm tra item có tồn tại không
-    if (item == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Thực phẩm không tồn tại')),
-      );
-      return;
-    }
+    print('Attempting to delete item with ID: $itemId');
 
-    // Lấy ID của item và kiểm tra null
-    final itemId = item['id'];
-    if (itemId == null || itemId.isEmpty) {
+    if (itemId == null || itemId.toString().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Không thể xóa thực phẩm vì thiếu ID')),
       );
@@ -109,26 +115,38 @@ class _ShoppingPageState extends State<ShoppingPage> {
     }
 
     try {
-      // Gọi API xóa thực phẩm
-      final success = await _apiService.deleteFood(id: itemId);
+      final success = await _apiService.deleteFood(id: itemId.toString());
+      print('Delete operation result: $success');
 
-      if (success == true) {
-        // Kiểm tra rõ ràng với true
+      if (success) {
+        print('Delete successful, removing item from list');
         setState(() {
           shoppingItems.removeAt(index);
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Xóa thực phẩm thành công!')),
-        );
+
+        await _saveShoppingItems(); // Lưu lại danh sách sau khi xóa
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Xóa thực phẩm thành công!')),
+          );
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Không thể xóa thực phẩm. Vui lòng thử lại')),
-        );
+        print('Delete operation returned false');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Không thể xóa thực phẩm. Vui lòng thử lại')),
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi xóa thực phẩm: $e')),
-      );
+      print('Error in _removeItem: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi xóa thực phẩm: $e')),
+        );
+      }
     }
   }
 
@@ -282,8 +300,10 @@ class _ShoppingPageState extends State<ShoppingPage> {
       itemCount: shoppingItems.length,
       itemBuilder: (context, index) {
         final item = shoppingItems[index];
+        print('Rendering item: $item');
+
         return Dismissible(
-          key: Key(item['id']?.toString() ?? DateTime.now().toString()),
+          key: Key(item['_id']?.toString() ?? DateTime.now().toString()),
           background: Container(
             color: Colors.red,
             alignment: Alignment.centerRight,
@@ -342,7 +362,8 @@ class _ShoppingPageState extends State<ShoppingPage> {
                 ),
               ),
               subtitle: Text(
-                'Số lượng: ${item['quantity']} ${item['unit']}\nDanh mục: ${item['category']}',
+                'Số lượng: ${item['quantity']?.toString() ?? '0'} ${item['unit']}\n'
+                'Danh mục: ${item['category']}',
                 style: TextStyle(
                   color: Colors.grey[600],
                 ),
@@ -498,16 +519,19 @@ class _ShoppingPageState extends State<ShoppingPage> {
     );
   }
 
-  Future<void> _showEditFoodDialog(BuildContext context, Map<String, dynamic> item) {
+  Future<void> _showEditFoodDialog(
+      BuildContext context, Map<String, dynamic> item) {
     // Debug: In ra toàn bộ item để kiểm tra
     print('Item received: $item');
     print('Item ID type: ${item['_id'].runtimeType}');
     print('Item ID value: ${item['_id']}');
 
     final nameController = TextEditingController(text: item['name'] ?? '');
-    final categoryController = TextEditingController(text: item['category'] ?? '');
+    final categoryController =
+        TextEditingController(text: item['category'] ?? '');
     final unitController = TextEditingController(text: item['unit'] ?? '');
-    final quantityController = TextEditingController(text: item['quantity']?.toString() ?? '0');
+    final quantityController =
+        TextEditingController(text: item['quantity']?.toString() ?? '0');
 
     return showDialog(
       context: context,
@@ -543,13 +567,9 @@ class _ShoppingPageState extends State<ShoppingPage> {
             ),
             TextButton(
               onPressed: () async {
-                // Kiểm tra và debug ID
-                print('Checking ID before update...');
-                print('ID value: ${item['_id']}');
-                print('ID type: ${item['_id'].runtimeType}');
-
                 // Kiểm tra ID một cách chi tiết hơn
-                if (item['_id'] == null || item['_id'].toString().trim().isEmpty) {
+                if (item['_id'] == null ||
+                    item['_id'].toString().trim().isEmpty) {
                   print('ID validation failed: ${item['_id']}');
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('ID thực phẩm không hợp lệ')),
@@ -558,9 +578,17 @@ class _ShoppingPageState extends State<ShoppingPage> {
                 }
 
                 try {
-                  // Chuyển đổi ID sang string an toàn
+                  // Sử dụng _id thay vì id
                   final foodId = item['_id'].toString();
                   print('Processed ID for API call: $foodId');
+
+                  if (foodId.isEmpty || foodId.length != 24) {
+                    print('Invalid ID: $foodId');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('ID thực phẩm không hợp lệ')),
+                    );
+                    return;
+                  }
 
                   final result = await _apiService.updateFood(
                     id: foodId,
@@ -568,22 +596,32 @@ class _ShoppingPageState extends State<ShoppingPage> {
                     category: categoryController.text.trim(),
                     unit: unitController.text.trim(),
                     quantity: int.tryParse(quantityController.text) ?? 0,
+                    userIdCreate: item['userIdCreate'] ?? '',
                   );
 
                   if (result != null) {
                     setState(() {
-                      final index = shoppingItems.indexWhere((i) => i['_id'] == item['_id']);
+                      final index = shoppingItems
+                          .indexWhere((i) => i['_id'] == item['_id']);
                       if (index != -1) {
+                        print('Before update: ${shoppingItems[index]}');
+
+                        // Cập nhật item với dữ liệu mới
                         shoppingItems[index] = {
-                          '_id': item['_id'],
-                          'name': nameController.text.trim(),
-                          'category': categoryController.text.trim(),
-                          'unit': unitController.text.trim(),
-                          'quantity': int.tryParse(quantityController.text) ?? 0,
+                          '_id': result['_id'],
+                          'name': result['name'],
+                          'category': result['category'],
+                          'unit': result['unit'],
+                          'quantity':
+                              int.tryParse(quantityController.text) ?? 0,
+                          'userIdCreate': result['userIdCreate'],
                         };
+
+                        print('After update: ${shoppingItems[index]}');
                       }
                     });
 
+                    // Không cần gọi _loadShoppingItems() ngay lập tức
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Cập nhật thực phẩm thành công')),
@@ -591,13 +629,16 @@ class _ShoppingPageState extends State<ShoppingPage> {
                   } else {
                     print('Update returned null result');
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Có lỗi xảy ra khi cập nhật thực phẩm')),
+                      SnackBar(
+                          content:
+                              Text('Có lỗi xảy ra khi cập nhật thực phẩm')),
                     );
                   }
                 } catch (e) {
                   print('Error during update: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Có lỗi xảy ra khi cập nhật thực phẩm')),
+                    SnackBar(
+                        content: Text('Có lỗi xảy ra khi cập nhật thực phẩm')),
                   );
                 }
               },
@@ -609,21 +650,22 @@ class _ShoppingPageState extends State<ShoppingPage> {
     );
   }
 
-    void _showUpdateFoodDialog(BuildContext context) {
+  void _showUpdateFoodDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
+      builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (BuildContext context, StateSetter setModalState) {
             return Container(
               height: MediaQuery.of(context).size.height * 0.8,
               padding: EdgeInsets.all(16),
               child: Column(
                 children: [
+                  // Header
                   Container(
                     width: 40,
                     height: 4,
@@ -641,6 +683,8 @@ class _ShoppingPageState extends State<ShoppingPage> {
                     ),
                   ),
                   SizedBox(height: 16),
+
+                  // Search Box
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
@@ -660,12 +704,13 @@ class _ShoppingPageState extends State<ShoppingPage> {
                     },
                   ),
                   SizedBox(height: 16),
+
+                  // Food List
                   Expanded(
                     child: FutureBuilder<List<Map<String, dynamic>>?>(
                       future: _apiService.getAllFoods(),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
                           return Center(
                             child: CircularProgressIndicator(
                               color: Color(0xFFBF4E19),
@@ -678,8 +723,7 @@ class _ShoppingPageState extends State<ShoppingPage> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.error_outline,
-                                    size: 48, color: Colors.red),
+                                Icon(Icons.error_outline, size: 48, color: Colors.red),
                                 SizedBox(height: 16),
                                 Text('Có lỗi xảy ra: ${snapshot.error}'),
                               ],
@@ -696,8 +740,7 @@ class _ShoppingPageState extends State<ShoppingPage> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.no_food,
-                                    size: 48, color: Colors.grey),
+                                Icon(Icons.no_food, size: 48, color: Colors.grey),
                                 SizedBox(height: 16),
                                 Text('Không tìm thấy thực phẩm nào'),
                               ],
@@ -733,63 +776,39 @@ class _ShoppingPageState extends State<ShoppingPage> {
                                 ),
                                 subtitle: Text(
                                   'Số lượng: ${food['quantity']?.toString() ?? '0'} ${food['unit']?.toString() ?? ''}\n'
-                                  'Danh mục: ${food['category']?.toString() ?? 'Chưa phân loại'}',
+                                      'Danh mục: ${food['category']?.toString() ?? 'Chưa phân loại'}',
                                 ),
-                                onTap: () async {
-                                  try {
-                                    // Kiểm tra và xử lý null safety cho các trường
-                                    final String? id = food['id']?.toString();
-                                    final String name =
-                                        food['name']?.toString() ??
-                                            'Không có tên';
-                                    final String category =
-                                        food['category']?.toString() ??
-                                            'Chưa phân loại';
-                                    final String unit =
-                                        food['unit']?.toString() ?? '';
-                                    final int quantity = int.tryParse(
-                                            food['quantity']?.toString() ??
-                                                '0') ??
-                                        0;
+                                onTap: () async {  // Thêm async
+                                  final newItem = {
+                                    '_id': food['_id'],
+                                    'name': food['name'] ?? 'Không có tên',
+                                    'category': food['category'] ?? 'Chưa phân loại',
+                                    'unit': food['unit'] ?? '',
+                                    'quantity': food['quantity'] ?? 0,
+                                    'userIdCreate': food['userIdCreate'] ?? '',
+                                  };
 
-                                    final result = await _apiService.updateFood(
-                                      id: id ?? '',
-                                      // Đảm bảo id không null
-                                      name: name,
-                                      category: category,
-                                      unit: unit,
-                                      quantity: quantity,
+                                  setState(() {
+                                    final existingIndex = shoppingItems.indexWhere(
+                                            (item) => item['_id'] == newItem['_id']
                                     );
 
-                                    if (result != null) {
-                                      // Cập nhật item với dữ liệu đã được xử lý null safety
-                                      _addItem({
-                                        'id': result,
-                                        'name': name,
-                                        'category': category,
-                                        'unit': unit,
-                                        'quantity': quantity,
-                                      });
-                                      Navigator.pop(context);
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                            content: Text(
-                                                'Thêm thực phẩm thành công')),
-                                      );
+                                    if (existingIndex != -1) {
+                                      shoppingItems[existingIndex]['quantity'] =
+                                          (shoppingItems[existingIndex]['quantity'] ?? 0) +
+                                              (newItem['quantity'] ?? 0);
                                     } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                            content: Text(
-                                                'Có lỗi xảy ra khi thêm thực phẩm')),
-                                      );
+                                      shoppingItems.add(newItem);
                                     }
-                                  } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Lỗi: $e')),
-                                    );
-                                  }
+                                  });
+
+                                  // Lưu vào SharedPreferences sau khi thêm
+                                  await _saveShoppingItems();
+
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Đã thêm ${food['name']} vào danh sách')),
+                                  );
                                 },
                               ),
                             );
@@ -889,42 +908,58 @@ class _ShoppingPageState extends State<ShoppingPage> {
                   SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () async {
-                      // Tạo thực phẩm mới
-                      final result = await _apiService.createFood(
-                        name: nameController.text,
-                        category: categoryController.text,
-                        unit: unitController.text,
-                      );
-
-                      if (result != null) {
-                        // Gọi _addItem để thêm thực phẩm vào shoppingItems
-                        _addItem({
-                          'name': nameController.text,
-                          'quantity': 1, // Hoặc giá trị mặc định khác
-                          'unit': unitController.text,
-                          'category': categoryController.text,
-                          'id': result, // Sử dụng ID trả về từ API
-                        });
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Tạo thực phẩm thành công!')),
-                        );
-                        Navigator.pop(context);
-                      } else {
+                      if (nameController.text.isEmpty ||
+                          categoryController.text.isEmpty ||
+                          unitController.text.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content: Text('Có lỗi xảy ra khi tạo thực phẩm')),
+                              content: Text('Vui lòng điền đầy đủ thông tin')),
                         );
+                        return;
+                      }
+
+                      try {
+                        final result = await _apiService.createFood(
+                          name: nameController.text,
+                          category: categoryController.text,
+                          unit: unitController.text,
+                        );
+
+                        if (result != null) {
+                          // Thêm vào danh sách local
+                          _addItem({
+                            'name': nameController.text,
+                            'quantity': 1,
+                            'unit': unitController.text,
+                            'category': categoryController.text,
+                            '_id': result,
+                          });
+
+                          if (mounted) {
+                            // Kiểm tra widget còn mounted không
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text('Tạo thực phẩm thành công!')),
+                            );
+                            Navigator.pop(context);
+                          }
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content:
+                                      Text('Có lỗi xảy ra khi tạo thực phẩm')),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Có lỗi xảy ra: $e')),
+                          );
+                        }
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF16A34A),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
                     child: Text('Tạo'),
                   ),
                 ],
