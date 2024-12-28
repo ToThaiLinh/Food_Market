@@ -1,16 +1,22 @@
 import 'dart:convert';
-
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../../../services/shopping_api_service.dart';
+import 'food_image_widget.dart';
 
 class ShoppingPage extends StatefulWidget {
   const ShoppingPage({super.key});
 
   @override
   _ShoppingPageState createState() => _ShoppingPageState();
+  static List<Map<String, dynamic>> getShoppingItems(BuildContext context) {
+    final state = context.findAncestorStateOfType<_ShoppingPageState>();
+    return state?.getShoppingItems() ?? [];
+  }
 }
 
 class _ShoppingPageState extends State<ShoppingPage> {
@@ -20,11 +26,35 @@ class _ShoppingPageState extends State<ShoppingPage> {
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> filteredItems = [];
   bool isSearching = false;
+  List<Map<String, dynamic>> getShoppingItems() {
+    return shoppingItems;
+  }
+  final ImagePicker _picker = ImagePicker();
+  File? _imageFile;
 
   @override
   void initState() {
     super.initState();
     _loadShoppingItems(); // Hiển thị tất cả item ban đầu
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+    }
   }
 
   Future<void> _saveShoppingItems() async {
@@ -59,35 +89,36 @@ class _ShoppingPageState extends State<ShoppingPage> {
 
   void _addItem(Map<String, dynamic> item) async {
     try {
-      // Gọi API để thêm hoặc cập nhật thực phẩm
-      final result = await _apiService.updateFood(
+      final result = await _apiService.createFood(
         name: item['name']!,
-        category: item['category'] ?? 'Uncategorized',
         unit: item['unit'] ?? '',
-        id: item['id'] ?? '',
-        quantity: item['quantity'] ?? 0,
-        userIdCreate: item['userIdCreate'] ?? '',
+        category: item['category'] ?? 'Uncategorized',
+        file: _imageFile!,
       );
 
       if (result != null) {
         setState(() {
           shoppingItems.add({
-            'name': item['name']!,
-            'quantity': item['quantity'] ?? 0,
-            'unit': item['unit'] ?? '',
-            'category': item['category'] ?? 'Uncategorized',
-            'id': result // Sử dụng ID trả về từ API
+            '_id': result['_id'],
+            'name': result['name'],
+            'unit': result['unit'],
+            'category': result['category'],
+            'imageUrl': result['imageUrl'],
+            'userIdCreate': result['userIdCreate'],
           });
         });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Thêm thực phẩm thành công!')),
         );
+        Navigator.of(context).pop();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Có lỗi xảy ra khi thêm thực phẩm')),
         );
       }
     } catch (e) {
+      print('Error in _addItem: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi: $e')),
       );
@@ -148,32 +179,6 @@ class _ShoppingPageState extends State<ShoppingPage> {
         );
       }
     }
-  }
-
-  // Helper method to extract quantity from the quantity string
-  int _extractQuantity(String quantityString) {
-    // Remove non-numeric characters and keep only the number
-    return int.parse(quantityString.replaceAll(RegExp(r'[^\d.]'), ''));
-  }
-
-  // Helper method to extract unit from the quantity string
-  String _extractUnit(String quantityString) {
-    // Extract the non-numeric part
-    return quantityString.replaceAll(RegExp(r'[\d.]'), '').trim();
-  }
-
-  void _startSearch() {
-    setState(() {
-      isSearching = true;
-    });
-  }
-
-  void _stopSearch() {
-    setState(() {
-      isSearching = false;
-      // filteredItems = availableItems;
-      _searchController.clear();
-    });
   }
 
   void _search(String query) {
@@ -342,17 +347,8 @@ class _ShoppingPageState extends State<ShoppingPage> {
             ),
             child: ListTile(
               contentPadding: EdgeInsets.all(16),
-              leading: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Color(0xFFBF4E19).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.shopping_basket,
-                  color: Color(0xFFBF4E19),
-                ),
+              leading: FoodImageWidget(
+                imageUrl: item['imageUrl'], // Sử dụng imageUrl từ API
               ),
               title: Text(
                 item['name']?.toString() ?? 'Không có tên',
@@ -378,10 +374,10 @@ class _ShoppingPageState extends State<ShoppingPage> {
                       await _showEditFoodDialog(context, item);
                     },
                   ),
-                  IconButton(
-                    icon: Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _removeItem(index),
-                  ),
+                  // IconButton(
+                  //   icon: Icon(Icons.delete, color: Colors.red),
+                  //   onPressed: () => _removeItem(index),
+                  // ),
                 ],
               ),
             ),
@@ -519,134 +515,216 @@ class _ShoppingPageState extends State<ShoppingPage> {
     );
   }
 
-  Future<void> _showEditFoodDialog(
-      BuildContext context, Map<String, dynamic> item) {
-    // Debug: In ra toàn bộ item để kiểm tra
-    print('Item received: $item');
-    print('Item ID type: ${item['_id'].runtimeType}');
-    print('Item ID value: ${item['_id']}');
-
+  Future<void> _showEditFoodDialog(BuildContext context, Map<String, dynamic> item) {
     final nameController = TextEditingController(text: item['name'] ?? '');
-    final categoryController =
-        TextEditingController(text: item['category'] ?? '');
-    final unitController = TextEditingController(text: item['unit'] ?? '');
-    final quantityController =
-        TextEditingController(text: item['quantity']?.toString() ?? '0');
+    FoodCategory? selectedCategory; // Initialize with current category
+    FoodUnit? selectedUnit; // Initialize with current unit
+
+    // Convert string to enum for category
+    selectedCategory = FoodCategory.values.firstWhere(
+            (cat) => cat.toString().split('.').last == item['category'],
+        orElse: () => FoodCategory.Other
+    );
+
+    // Convert string to enum for unit
+    selectedUnit = FoodUnit.values.firstWhere(
+            (unit) => unit.toString().split('.').last == item['unit'],
+        orElse: () => FoodUnit.Other
+    );
 
     return showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Chỉnh sửa thực phẩm'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: 'Tên thực phẩm'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            return Container(
+              padding: EdgeInsets.all(16),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.edit_note, color: Color(0xFF16A34A)),
+                        SizedBox(width: 8),
+                        Text(
+                          'Chỉnh sửa thực phẩm',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: _imageFile != null
+                          ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          _imageFile!,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                          : item['imageUrl'] != null
+                          ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: FoodImageWidget(
+                          imageUrl: item['imageUrl'],
+                        ),
+                      )
+                          : IconButton(
+                        icon: Icon(Icons.add_photo_alternate),
+                        onPressed: () async {
+                          await _pickImage();
+                          setState(() {}); // Update UI after picking image
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Tên thực phẩm',
+                        prefixIcon: Icon(Icons.food_bank),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    DropdownButtonFormField<FoodCategory>(
+                      value: selectedCategory,
+                      decoration: InputDecoration(
+                        labelText: 'Danh mục',
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      items: FoodCategory.values.map((FoodCategory category) {
+                        return DropdownMenuItem<FoodCategory>(
+                          value: category,
+                          child: Text(category.toString().split('.').last),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedCategory = value;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    DropdownButtonFormField<FoodUnit>(
+                      value: selectedUnit,
+                      decoration: InputDecoration(
+                        labelText: 'Đơn vị',
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      items: FoodUnit.values.map((FoodUnit unit) {
+                        return DropdownMenuItem<FoodUnit>(
+                          value: unit,
+                          child: Text(unit.toString().split('.').last),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedUnit = value;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            'Hủy',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () async {
+                            if (nameController.text.isEmpty ||
+                                selectedCategory == null ||
+                                selectedUnit == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Vui lòng điền đầy đủ thông tin')),
+                              );
+                              return;
+                            }
+
+                            try {
+                              final foodId = item['_id'].toString();
+                              final result = await _apiService.updateFood(
+                                id: foodId,
+                                name: nameController.text.trim(),
+                                category: selectedCategory.toString().split('.').last,
+                                unit: selectedUnit.toString().split('.').last,
+                                userIdCreate: item['userIdCreate'] ?? '',
+                                file: _imageFile, // Pass the file directly, it can be null
+                              );
+
+                              if (result != null) {
+                                setState(() {
+                                  final index = shoppingItems.indexWhere((i) => i['_id'] == item['_id']);
+                                  if (index != -1) {
+                                    shoppingItems[index] = {
+                                      '_id': result['_id'],
+                                      'name': result['name'],
+                                      'category': result['category'],
+                                      'unit': result['unit'],
+                                      'imageUrl': result['imageUrl'] ?? item['imageUrl'], // Keep old image URL if no new one
+                                      'userIdCreate': result['userIdCreate'],
+                                    };
+                                  }
+                                });
+
+                                Navigator.of(context).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Cập nhật thực phẩm thành công')),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Có lỗi xảy ra khi cập nhật thực phẩm')),
+                                );
+                              }
+                            } catch (e) {
+                              print('Error during update: $e');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Có lỗi xảy ra khi cập nhật thực phẩm')),
+                              );
+                            }
+                          },
+                          child: Text('Cập nhật'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              TextField(
-                controller: categoryController,
-                decoration: InputDecoration(labelText: 'Danh mục'),
-              ),
-              TextField(
-                controller: unitController,
-                decoration: InputDecoration(labelText: 'Đơn vị'),
-              ),
-              TextField(
-                controller: quantityController,
-                decoration: InputDecoration(labelText: 'Số lượng'),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Hủy'),
-            ),
-            TextButton(
-              onPressed: () async {
-                // Kiểm tra ID một cách chi tiết hơn
-                if (item['_id'] == null ||
-                    item['_id'].toString().trim().isEmpty) {
-                  print('ID validation failed: ${item['_id']}');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('ID thực phẩm không hợp lệ')),
-                  );
-                  return;
-                }
-
-                try {
-                  // Sử dụng _id thay vì id
-                  final foodId = item['_id'].toString();
-                  print('Processed ID for API call: $foodId');
-
-                  if (foodId.isEmpty || foodId.length != 24) {
-                    print('Invalid ID: $foodId');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('ID thực phẩm không hợp lệ')),
-                    );
-                    return;
-                  }
-
-                  final result = await _apiService.updateFood(
-                    id: foodId,
-                    name: nameController.text.trim(),
-                    category: categoryController.text.trim(),
-                    unit: unitController.text.trim(),
-                    quantity: int.tryParse(quantityController.text) ?? 0,
-                    userIdCreate: item['userIdCreate'] ?? '',
-                  );
-
-                  if (result != null) {
-                    setState(() {
-                      final index = shoppingItems
-                          .indexWhere((i) => i['_id'] == item['_id']);
-                      if (index != -1) {
-                        print('Before update: ${shoppingItems[index]}');
-
-                        // Cập nhật item với dữ liệu mới
-                        shoppingItems[index] = {
-                          '_id': result['_id'],
-                          'name': result['name'],
-                          'category': result['category'],
-                          'unit': result['unit'],
-                          'quantity':
-                              int.tryParse(quantityController.text) ?? 0,
-                          'userIdCreate': result['userIdCreate'],
-                        };
-
-                        print('After update: ${shoppingItems[index]}');
-                      }
-                    });
-
-                    // Không cần gọi _loadShoppingItems() ngay lập tức
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Cập nhật thực phẩm thành công')),
-                    );
-                  } else {
-                    print('Update returned null result');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content:
-                              Text('Có lỗi xảy ra khi cập nhật thực phẩm')),
-                    );
-                  }
-                } catch (e) {
-                  print('Error during update: $e');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text('Có lỗi xảy ra khi cập nhật thực phẩm')),
-                  );
-                }
-              },
-              child: Text('Cập nhật'),
-            ),
-          ],
-        );
-      },
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -758,17 +836,8 @@ class _ShoppingPageState extends State<ShoppingPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: ListTile(
-                                leading: Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: Color(0xFFBF4E19).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.food_bank,
-                                    color: Color(0xFFBF4E19),
-                                  ),
+                                leading: FoodImageWidget(
+                                  imageUrl: food['imageUrl'],
                                 ),
                                 title: Text(
                                   food['name']?.toString() ?? 'Không có tên',
@@ -786,6 +855,7 @@ class _ShoppingPageState extends State<ShoppingPage> {
                                     'unit': food['unit'] ?? '',
                                     'quantity': food['quantity'] ?? 0,
                                     'userIdCreate': food['userIdCreate'] ?? '',
+                                    'imageUrl': food['imageUrl'], // Sử dụng imageUrl từ API response
                                   };
 
                                   setState(() {
@@ -828,8 +898,8 @@ class _ShoppingPageState extends State<ShoppingPage> {
 
   void _showCreateFoodDialog(BuildContext context) {
     final nameController = TextEditingController();
-    final categoryController = TextEditingController();
-    final unitController = TextEditingController();
+    FoodCategory? selectedCategory; // Khai báo biến để lưu danh mục đã chọn
+    FoodUnit? selectedUnit; // Khai báo biến để lưu đơn vị đã chọn
 
     showDialog(
       context: context,
@@ -837,137 +907,191 @@ class _ShoppingPageState extends State<ShoppingPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Container(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            return Container(
+              padding: EdgeInsets.all(16),
+              child: SingleChildScrollView(
+                child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.add_circle, color: Color(0xFF16A34A)),
-                  SizedBox(width: 8),
-                  Text(
-                    'Tạo thực phẩm mới',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                  Row(
+                    children: [
+                      Icon(Icons.add_circle, color: Color(0xFF16A34A)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Tạo thực phẩm mới',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: _imageFile != null
+                        ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        _imageFile!,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                        : IconButton(
+                      icon: Icon(Icons.add_photo_alternate),
+                      onPressed: () async {
+                        await _pickImage();
+                        setState(() {}); // Update UI sau khi chọn ảnh
+                      },
                     ),
                   ),
-                ],
-              ),
-              SizedBox(height: 24),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'Tên thực phẩm',
-                  prefixIcon: Icon(Icons.food_bank),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
-              ),
-              SizedBox(height: 16),
-              TextField(
-                controller: categoryController,
-                decoration: InputDecoration(
-                  labelText: 'Danh mục',
-                  prefixIcon: Icon(Icons.category),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
-              ),
-              SizedBox(height: 16),
-              TextField(
-                controller: unitController,
-                decoration: InputDecoration(
-                  labelText: 'Đơn vị',
-                  prefixIcon: Icon(Icons.straighten),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
-              ),
-              SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'Hủy',
-                      style: TextStyle(color: Colors.grey),
+                  SizedBox(height: 24),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Tên thực phẩm',
+                      prefixIcon: Icon(Icons.food_bank),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
                     ),
                   ),
-                  SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (nameController.text.isEmpty ||
-                          categoryController.text.isEmpty ||
-                          unitController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('Vui lòng điền đầy đủ thông tin')),
-                        );
-                        return;
-                      }
-
-                      try {
-                        final result = await _apiService.createFood(
-                          name: nameController.text,
-                          category: categoryController.text,
-                          unit: unitController.text,
-                        );
-
-                        if (result != null) {
-                          // Thêm vào danh sách local
-                          _addItem({
-                            'name': nameController.text,
-                            'quantity': 1,
-                            'unit': unitController.text,
-                            'category': categoryController.text,
-                            '_id': result,
-                          });
-
-                          if (mounted) {
-                            // Kiểm tra widget còn mounted không
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text('Tạo thực phẩm thành công!')),
-                            );
-                            Navigator.pop(context);
-                          }
-                        } else {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content:
-                                      Text('Có lỗi xảy ra khi tạo thực phẩm')),
-                            );
-                          }
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Có lỗi xảy ra: $e')),
-                          );
-                        }
-                      }
+                  SizedBox(height: 16),
+                  // Dropdown cho danh mục
+                  DropdownButtonFormField<FoodCategory>(
+                    decoration: InputDecoration(
+                      labelText: 'Danh mục',
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: FoodCategory.values.map((FoodCategory category) {
+                      return DropdownMenuItem<FoodCategory>(
+                        value: category,
+                        child: Text(category.toString().split('.').last),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      selectedCategory = value; // Lưu giá trị đã chọn
                     },
-                    child: Text('Tạo'),
+                  ),
+                  SizedBox(height: 16),
+                  // Dropdown cho đơn vị
+                  DropdownButtonFormField<FoodUnit>(
+                    decoration: InputDecoration(
+                      labelText: 'Đơn vị',
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: FoodUnit.values.map((FoodUnit unit) {
+                      return DropdownMenuItem<FoodUnit>(
+                        value: unit,
+                        child: Text(unit.toString().split('.').last),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      selectedUnit = value; // Lưu giá trị đã chọn
+                    },
+                  ),
+                  SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          'Hủy',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (nameController.text.isEmpty ||
+                              selectedCategory == null ||
+                              selectedUnit == null ||
+                              _imageFile == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Vui lòng điền đầy đủ thông tin và chọn ảnh')),
+                            );
+                            return;
+                          }
+
+                          try {
+                            final result = await _apiService.createFood(
+                              name: nameController.text,
+                              category: selectedCategory.toString().split('.').last,
+                              unit: selectedUnit.toString().split('.').last,
+                              file: _imageFile!,
+                            );
+
+                            // Kiểm tra xem result có phải là một Map không
+                            if (result != null && result is Map) {
+                              _addItem({
+                                'name': nameController.text,
+                                'unit': selectedUnit.toString().split('.').last,
+                                'category': selectedCategory.toString().split('.').last,
+                              });
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Có lỗi xảy ra khi thêm thực phẩm')),
+                              );
+                            }
+                          } catch (e) {
+                            print('Error creating food: $e'); // In ra lỗi để kiểm tra
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Lỗi: $e')),
+                            );
+                          }
+                        },
+                        child: Text('Tạo'),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+              )
+            );
+          }
         ),
       ),
     );
   }
+}
+
+enum FoodCategory {
+  Vegetable,
+  Meat,
+  Tuber,
+  Fruit,
+  Dairy,
+  Spices,
+  Other,
+}
+
+enum FoodUnit {
+  Gram,
+  Kilogram,
+  Teaspoon,
+  Root,
+  Fruit,
+  Bunch,
+  Slice,
+  Leaf,
+  Package,
+  Other,
 }

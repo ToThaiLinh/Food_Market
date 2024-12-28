@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../services/user_api_service.dart';
+import 'change_password_page.dart';
 
 class MePage extends StatelessWidget {
   @override
@@ -134,7 +134,7 @@ class MePage extends StatelessWidget {
                             child: Text('Có'),
                             onPressed: () {
                               Navigator.of(context).pop(); // Đóng dialog
-                              Navigator.pop(context); // Thực hiện pop để thoát
+                              Navigator.pushReplacementNamed(context, '/login_page');
                             },
                           ),
                         ],
@@ -244,113 +244,6 @@ class UpdatePhonePage extends StatelessWidget {
               ),
               onPressed: () {},
               child: Text('Tiếp tục', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Change Password Page
-class ChangePasswordPage extends StatefulWidget {
-  @override
-  _ChangePasswordPageState createState() => _ChangePasswordPageState();
-}
-
-class _ChangePasswordPageState extends State<ChangePasswordPage> {
-  final _oldPasswordController = TextEditingController();
-  final _newPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  final _userApiService = UserApiService();
-  bool _isLoading = false;
-
-  Future<void> _changePassword() async {
-    if (_newPasswordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Mật khẩu mới không khớp')),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final result = await _userApiService.changePassword(
-        oldPassword: _oldPasswordController.text,
-        newPassword: _newPasswordController.text,
-      );
-
-      if (result != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đổi mật khẩu thành công')),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đổi mật khẩu thất bại: ${e.toString()}')),
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    _oldPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Đổi mật khẩu', style: TextStyle(color: Colors.white)),
-        backgroundColor: Color(0xFFBF4E19),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _oldPasswordController,
-              decoration: InputDecoration(
-                labelText: 'Mật khẩu hiện tại',
-                border: OutlineInputBorder(),
-              ),
-              obscureText: true,
-            ),
-            SizedBox(height: 16),
-            TextField(
-              controller: _newPasswordController,
-              decoration: InputDecoration(
-                labelText: 'Mật khẩu mới',
-                border: OutlineInputBorder(),
-              ),
-              obscureText: true,
-            ),
-            SizedBox(height: 16),
-            TextField(
-              controller: _confirmPasswordController,
-              decoration: InputDecoration(
-                labelText: 'Nhập lại mật khẩu mới',
-                border: OutlineInputBorder(),
-              ),
-              obscureText: true,
-            ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                minimumSize: Size(double.infinity, 50),
-              ),
-              onPressed: _isLoading ? null : _changePassword,
-              child: _isLoading
-                  ? CircularProgressIndicator(color: Colors.white)
-                  : Text('Lưu', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),

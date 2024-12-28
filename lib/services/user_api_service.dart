@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../ui/pages/login/login_page.dart';
+
 class UserApiService {
   String accessToken = '';
   final String _baseUrl = 'http://10.0.2.2:8080/it4788/user';
@@ -11,11 +13,11 @@ class UserApiService {
   }) async {
     final url = Uri.parse('$_baseUrl/change-password');
 
-    final response = await http.post(
+    final response = await http.patch(
       url,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Bearer $accessToken',
+        'Authorization': 'Bearer $globalToken',
       },
       body: {
         'oldPassword': oldPassword,

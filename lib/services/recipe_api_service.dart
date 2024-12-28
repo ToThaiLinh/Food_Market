@@ -126,32 +126,26 @@ class RecipeApiService {
         },
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        // Chuyển đổi response body thành UTF8 để đảm bảo đọc đúng
-        final String responseBody = utf8.decode(response.bodyBytes);
-        print('Full Response Body Length: ${responseBody.length}');
+      print('Response Status Code: ${response.statusCode}'); // Ghi lại mã trạng thái
+      print('Response Body: ${response.body}'); // Ghi lại nội dung phản hồi
 
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final String responseBody = utf8.decode(response.bodyBytes);
         final Map<String, dynamic> data = jsonDecode(responseBody);
 
         if (data.containsKey('recipes') && data['recipes'] is List) {
           final List<dynamic> recipeList = data['recipes'] as List;
-
-          final List<Map<String, dynamic>> recipes = recipeList
-              .map((item) => item as Map<String, dynamic>)
-              .toList();
-
-          return recipes;
+          return recipeList.map((item) => item as Map<String, dynamic>).toList();
         } else {
           print('Invalid data structure: ${data.keys}');
           return null;
         }
       } else {
         print('Error status code: ${response.statusCode}');
-        print('Error response: ${response.body}');
         return null;
       }
     } catch (err) {
-      print('Error getting foods: $err');
+      print('Error getting recipes: $err');
       return null;
     }
   }

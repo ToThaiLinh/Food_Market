@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:food/ui/pages/login/login_page.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,45 +8,36 @@ class ShoppingApiService {
   String accessToken = '';
   final String _baseUrl = 'http://10.0.2.2:8080/it4788';
 
-  Future<String?> createFood({
+  Future<Map<String, dynamic>?> createFood({
     required String name,
     required String category,
     required String unit,
+    required File file,
   }) async {
     final url = Uri.parse('$_baseUrl/food');
     try {
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Bearer $globalToken',
-        },
-        body: {
-          'name': name,
-          'category': category,
-          'unit': unit,
-        },
-      );
+      var request = http.MultipartRequest('POST', url)
+        ..headers['Authorization'] = 'Bearer $globalToken'
+        ..fields['name'] = name
+        ..fields['category'] = category
+        ..fields['unit'] = unit
+        ..files.add(await http.MultipartFile.fromPath('file', file.path));
 
-      print('Response Body: ${response.body}');
-      print('Status Code: ${response.statusCode}');
+      final response = await request.send();
+      final responseBody = await http.Response.fromStream(response);
 
-      // Parse response body
-      final data = jsonDecode(response.body);
+      print('Response Body: ${responseBody.body}');
+      print('Status Code: ${responseBody.statusCode}');
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        // Check if food object exists in response
-        if (data['food'] != null && data['food']['_id'] != null) {
-          return data['food']['_id'];
-        } else {
-          print('Invalid response format: ${response.body}');
-          return null;
+      if (responseBody.statusCode == 200 || responseBody.statusCode == 201) {
+        final data = jsonDecode(responseBody.body);
+
+        // Check if the response contains food data
+        if (data['food'] != null && data['food'] is Map<String, dynamic>) {
+          return data['food'];  // Return the entire food object
         }
-      } else {
-        print('Error response: ${response.body}');
-        return null;
       }
-
+      return null;
     } catch (err) {
       print('Detailed Error: $err');
       return null;
@@ -58,56 +50,39 @@ class ShoppingApiService {
     required String unit,
     required String id,
     required String userIdCreate,
-    required int quantity,
+    File? file, // Make file optional
   }) async {
-    final url = Uri.parse('$_baseUrl/food');
+    // Validate input data
+    if (name.isEmpty || category.isEmpty || unit.isEmpty || id.isEmpty || userIdCreate.isEmpty) {
+      print('Validation Error: All fields must be filled.');
+      return null; // Or throw an exception
+    }
+
+    final url = Uri.parse('$_baseUrl/food/$id'); // Include the ID in the URL
     try {
       print('Sending update request with ID: $id');
-      final response = await http.put(
-        url,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Bearer $globalToken',
-        },
-        body: {
-          'name': name,
-          'category': category,
-          'unit': unit,
-          'id': id,
-          'userIdCreate': userIdCreate,
-          'quantity': quantity.toString(),
-        },
-      );
+      var request = http.MultipartRequest('PUT', url)
+        ..headers['Authorization'] = 'Bearer $globalToken'
+        ..fields['name'] = name
+        ..fields['category'] = category
+        ..fields['unit'] = unit
+        ..fields['userIdCreate'] = userIdCreate; // Ensure userIdCreate is included
 
-      print('Response Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
+      // Only add file to request if it exists
+      if (file != null) {
+        request.files.add(await http.MultipartFile.fromPath('file', file.path));
+      }
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        print('Decoded response data: $data');
+      final response = await request.send();
+      final responseBody = await http.Response.fromStream(response);
 
+      if (responseBody.statusCode == 200 || responseBody.statusCode == 201) {
+        final data = jsonDecode(responseBody.body);
         if (data['food'] != null) {
-          try {
-            // Lưu quantity vào SharedPreferences
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setInt('food_quantity_${data['food']['_id']}', quantity);
-            print('Saved quantity ${quantity} for food ${data['food']['_id']}');
-
-            // Trả về toàn bộ object food với quantity
-            return {
-              ...data['food'],
-              'quantity': quantity
-            };
-          } catch (e) {
-            print('Error saving to SharedPreferences: $e');
-            // Vẫn trả về dữ liệu ngay cả khi không lưu được vào SharedPreferences
-            return {
-              ...data['food'],
-              'quantity': quantity
-            };
-          }
+          return data['food'];
         }
       }
+      print('API Response: ${responseBody.body}'); // Add this for debugging
       return null;
     } catch (err) {
       print('Detailed Error: $err');

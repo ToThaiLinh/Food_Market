@@ -1,10 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
+import 'package:food/ui/pages/fridge/select_food_dialog.dart';
+import 'package:food/ui/pages/fridge/update_food_in_fridge_dialog.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/fridge_api_service.dart';
 import '../../../services/shopping_api_service.dart';
+import 'add_food_to_fridge_dialog.dart';
 
 class FridgePage extends StatefulWidget {
+  const FridgePage({super.key});
+
   @override
   _FridgePageState createState() => _FridgePageState();
 }
@@ -12,235 +20,103 @@ class FridgePage extends StatefulWidget {
 class _FridgePageState extends State<FridgePage> {
   late ShoppingApiService _shoppingApiService;
   late FridgeApiService _fridgeApiService;
-  List<dynamic> _availableFridgeFoods = [];
+  List<Map<String, dynamic>> _fridgeFoods = [];
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _shoppingApiService = ShoppingApiService();
     _fridgeApiService = FridgeApiService();
-    _fetchAvailableFridgeFoods();
+    loadFoodsFromStorage();
   }
 
-  Future<void> _fetchAvailableFridgeFoods() async {
-    final foods = await _shoppingApiService.getAllFoods();
-    if (foods != null) {
-      Set<String> seenNames = {};
-      List<Map<String, dynamic>> uniqueList = foods.where((map) {
-        final name = map["name"];
-        if (seenNames.contains(name)) {
-          return false;
-        } else {
-          seenNames.add(name);
-          return true;
+  Future<void> loadFoodsFromStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? fridgeFoodsJson = prefs.getString('fridge_foods');
+
+      if (fridgeFoodsJson != null) {
+        final List<dynamic> decodedItems = jsonDecode(fridgeFoodsJson);
+        if (mounted) {
+          setState(() {
+            _fridgeFoods = decodedItems.cast<Map<String, dynamic>>();
+          });
         }
-      }).toList();
-
-      setState(() {
-        _availableFridgeFoods = uniqueList;
-      });
-      print("Available Fridge Foods: ${_availableFridgeFoods.length}");
-    }
-  }
-
-  Future<void> _addFoodToFridge(Map<String, dynamic> food) async {
-    // Prompt user for quantity and use-within period
-    final result = await showDialog<Map<String, dynamic>>(
-        context: context,
-        builder: (context) => AddFoodToFridgeDialog(food: food));
-
-    if (result != null) {
-      try {
-        final fridgeId = await _fridgeApiService.createFood(
-          foodName: food['name'],
-          useWithin: result['useWithin'],
-          quantity: result['quantity'],
-          foodId: food['_id'],
-        );
-
-        if (fridgeId != null) {
-          // Show success message or update UI
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${food['name']} added to fridge')),
-          );
-          _fetchAvailableFridgeFoods();
-          setState(() {});
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add food: $e')),
-        );
       }
+    } catch (e) {
+      print('Error loading fridge foods: $e');
     }
   }
 
-  Future<void> _updateFoodInFridge(Map<String, dynamic> food) async {
-    // // Tìm thực phẩm hiện có trong tủ lạnh
-    // final existingFood = _availableFridgeFoods.firstWhere(
-    //       (fridgeFood) => fridgeFood['name'] == food['name'],
-    //   orElse: () => null,
-    // );
-    //
-    // if (existingFood == null) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(content: Text('Thực phẩm không tồn tại trong tủ lạnh')),
-    //   );
-    //   return;
-    // }
-
-    // Hiển thị dialog để người dùng nhập thông tin cập nhật
-    final result = await showDialog<Map<String, dynamic>>(
-        context: context,
-        builder: (context) => UpdateFoodInFridgeDialog(food: food));
-
-    if (result != null) {
-      try {
-        final updatedId = await _fridgeApiService.updateFood(
-          newFoodName: result['newFoodName'] ?? food['name'], // Sử dụng tên thực phẩm mới nếu có
-          newUseWithin: 123, // Sử dụng giá trị hiện tại nếu không có
-          newQuantity: result['quantity'] ?? food['quantity'], // Sử dụng giá trị hiện tại nếu không có
-          newNote: result['note'] ?? '', // Sử dụng chuỗi rỗng nếu không có
-          itemId: food['_id'],
-        );
-
-        if (updatedId != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${food['name']} đã được cập nhật trong tủ lạnh')),
-          );
-          _fetchAvailableFridgeFoods(); // Cập nhật danh sách thực phẩm
-          setState(() {}); // Cập nhật giao diện
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Cập nhật thực phẩm thất bại: $e')),
-        );
-      }
+  Future<void> _saveFridgeFoods() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String fridgeFoodsJson = jsonEncode(_fridgeFoods);
+      await prefs.setString('fridge_foods', fridgeFoodsJson);
+    } catch (e) {
+      print('Error saving fridge foods: $e');
     }
+  }
+
+  Future<void> _fetchFridgeFoods() async {
+    try {
+      final foods = await _shoppingApiService.getAllFoods();
+      if (foods != null) {
+        setState(() {
+          _fridgeFoods = foods;
+        });
+      }
+    } catch (e) {
+      print('Error fetching fridge foods: $e');
+    }
+  }
+
+  bool _isExpiringSoon(DateTime expiryDate) {
+    final daysUntilExpiry = expiryDate.difference(DateTime.now()).inDays;
+    return daysUntilExpiry <= 3 && daysUntilExpiry >= 0;
+  }
+
+  bool _isExpired(DateTime expiryDate) {
+    return expiryDate.isBefore(DateTime.now());
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildHeader(),
-        _buildSearchBar(),
-        Expanded(
-          child: _buildFoodGrid(),
-        ),
-      ],
+    return Scaffold(
+      body: Column(
+        children: [
+          _buildHeader(),
+          _buildSearchBar(),
+          _buildCategoryTabs(),
+          Expanded(
+            child: _buildFoodList(),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Color(0xFFBF4E19),
+        child: Icon(Icons.add),
+        onPressed: () => _showAddFoodDialog(),
+      ),
     );
   }
 
   Widget _buildHeader() {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(16.w),
       color: Color(0xFFBF4E19),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Quản lý tủ lạnh',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          IconButton(
-            icon: Icon(Icons.add_circle, color: Colors.white),
-            onPressed: () {_fetchAvailableFridgeFoods();
-      showModalBottomSheet(
-      context: context,
-      builder: (context) => FoodSelectionBottomSheet(
-        foods: _availableFridgeFoods,
-        onFoodSelected: _addFoodToFridge,
-      ),
-    );
-  },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: EdgeInsets.all(16),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: 'Tìm kiếm thực phẩm...',
-          prefixIcon: Icon(Icons.search),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          filled: true,
-          fillColor: Colors.grey[100],
-        ),
-        onChanged: (value) {
-          // Implement search functionality
-        },
-      ),
-    );
-  }
-
-  Widget _buildFoodGrid() {
-    return GridView.builder(
-      padding: EdgeInsets.all(16),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-      ),
-      itemCount: _availableFridgeFoods.length,
-      itemBuilder: (context, index) {
-        final food = _availableFridgeFoods[index];
-        return _buildFoodCard(food);
-      },
-    );
-  }
-
-  Widget _buildFoodCard(Map<String, dynamic> food) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () => _updateFoodInFridge(food),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: SafeArea(
+        child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-              child: Image.network(
-                'https://via.placeholder.com/150',
-                height: 120,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    food['name'],
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Số lượng: ${food['quantity']}',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  // Add expiry date if available
-                ],
+            Icon(Icons.kitchen, color: Colors.white, size: 24.w),
+            SizedBox(width: 8.w),
+            Text(
+              'Tủ lạnh của tôi',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20.sp,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
@@ -248,230 +124,353 @@ class _FridgePageState extends State<FridgePage> {
       ),
     );
   }
-}
 
-class AddFoodToFridgeDialog extends StatefulWidget {
-  final Map<String, dynamic> food;
-
-  const AddFoodToFridgeDialog({Key? key, required this.food}) : super(key: key);
-
-  @override
-  _AddFoodToFridgeDialogState createState() => _AddFoodToFridgeDialogState();
-}
-
-class _AddFoodToFridgeDialogState extends State<AddFoodToFridgeDialog> {
-  late TextEditingController _quantityController;
-  late TextEditingController _useWithinController;
-
-  @override
-  void initState() {
-    super.initState();
-    _quantityController = TextEditingController();
-    _useWithinController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _quantityController.dispose();
-    _useWithinController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Thêm ${widget.food['name']} vào tủ lạnh'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _quantityController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Số lượng',
-              hintText: 'Nhập số lượng',
-            ),
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: EdgeInsets.all(16.w),
+      child: TextField(
+        onChanged: (value) => setState(() => _searchQuery = value),
+        decoration: InputDecoration(
+          hintText: 'Tìm kiếm thực phẩm...',
+          prefixIcon: Icon(Icons.search),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10.r),
           ),
-          TextField(
-            controller: _useWithinController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Sử dụng trong (ngày)',
-              hintText: 'Nhập số ngày',
-            ),
-          ),
-        ],
+          filled: true,
+          fillColor: Colors.grey[100],
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('Hủy'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            final quantity = int.tryParse(_quantityController.text);
-            final useWithin = int.tryParse(_useWithinController.text);
-
-            if (quantity != null && useWithin != null) {
-              Navigator.of(context).pop({
-                'quantity': quantity,
-                'useWithin': useWithin,
-              });
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin')),
-              );
-            }
-          },
-          child: Text('Thêm'),
-        ),
-      ],
     );
   }
-}
 
-class UpdateFoodInFridgeDialog extends StatefulWidget {
-  final Map<String, dynamic> food;
-
-  const UpdateFoodInFridgeDialog({Key? key, required this.food}) : super(key: key);
-
-  @override
-  _UpdateFoodInFridgeDialogState createState() => _UpdateFoodInFridgeDialogState();
-}
-
-class _UpdateFoodInFridgeDialogState extends State<UpdateFoodInFridgeDialog> {
-  late TextEditingController _quantityController;
-  late TextEditingController _useWithinController;
-  late TextEditingController _noteController;
-  late TextEditingController _foodNameController;
-
-  @override
-  void initState() {
-    super.initState();
-    _quantityController = TextEditingController(text: widget.food['quantity']?.toString());
-    _useWithinController = TextEditingController(text: widget.food['useWithin']?.toString());
-    _noteController = TextEditingController(text: widget.food['note'] ?? '');
-    _foodNameController = TextEditingController(text: widget.food['name']); // Initialize with current name
-  }
-
-  @override
-  void dispose() {
-    _quantityController.dispose();
-    _useWithinController.dispose();
-    _noteController.dispose();
-    _foodNameController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Cập nhật ${widget.food['name']}'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _foodNameController,
-            decoration: InputDecoration(
-              labelText: 'Tên thực phẩm',
-              hintText: 'Nhập tên thực phẩm mới (tuỳ chọn)',
-            ),
-          ),
-          TextField(
-            controller: _quantityController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Số lượng',
-              hintText: 'Nhập số lượng mới (tuỳ chọn)',
-            ),
-          ),
-          TextField(
-            controller: _useWithinController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Sử dụng trong (ngày)',
-              hintText: 'Nhập số ngày mới (tuỳ chọn)',
-            ),
-          ),
-          TextField(
-            controller: _noteController,
-            decoration: InputDecoration(
-              labelText: 'Ghi chú',
-              hintText: 'Nhập ghi chú (tuỳ chọn)',
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('Hủy'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            final quantity = int.tryParse(_quantityController.text);
-            final useWithin = int.tryParse(_useWithinController.text);
-            final note = _noteController.text;
-            final newFoodName = _foodNameController.text;
-
-            Navigator.of(context).pop({
-              'quantity': quantity,
-              'useWithin': useWithin,
-              'note': note,
-              'newFoodName': newFoodName,
-            });
-          },
-          child: Text('Cập nhật'),
-        ),
-      ],
-    );
-  }
-}
-
-class FoodSelectionBottomSheet extends StatelessWidget {
-  final List<dynamic> foods;
-  final Function(Map<String, dynamic>) onFoodSelected;
-
-  const FoodSelectionBottomSheet({
-    Key? key,
-    required this.foods,
-    required this.onFoodSelected,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildCategoryTabs() {
     return Container(
-      height: 400,
-      child: Column(
+      height: 40.h,
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              'Chọn thực phẩm',
+          _buildCategoryChip('Tất cả', true),
+          _buildCategoryChip('Rau củ', false),
+          _buildCategoryChip('Thịt', false),
+          _buildCategoryChip('Đã chế biến', false),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip(String label, bool isSelected) {
+    return Container(
+      margin: EdgeInsets.only(right: 8.w),
+      child: FilterChip(
+        selected: isSelected,
+        label: Text(label),
+        onSelected: (bool selected) {
+          // Implement category filtering
+        },
+        backgroundColor: Colors.grey[200],
+        selectedColor: Color(0xFFBF4E19).withOpacity(0.2),
+        labelStyle: TextStyle(
+          color: isSelected ? Color(0xFFBF4E19) : Colors.black,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFoodList() {
+    if (_fridgeFoods.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.no_food, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'Chưa có thực phẩm nào trong tủ lạnh',
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final filteredFoods = _fridgeFoods
+        .where((food) => food['itemName'].toString().toLowerCase()
+        .contains(_searchQuery.toLowerCase()))
+        .toList();
+
+    return ListView.builder(
+      padding: EdgeInsets.all(16.w),
+      itemCount: filteredFoods.length,
+      itemBuilder: (context, index) {
+        final food = filteredFoods[index];
+        final createdAt = DateTime.parse(food['createdAt'] ?? DateTime.now().toIso8601String());
+        final expiryDate = createdAt.add(Duration(days: food['useWithin'] ?? 0));
+
+        return Dismissible(
+          key: Key(food['id']?.toString() ?? DateTime.now().toString()),
+          background: Container(
+            color: Colors.red,
+            alignment: Alignment.centerRight,
+            padding: EdgeInsets.only(right: 16),
+            child: Icon(Icons.delete, color: Colors.white),
+          ),
+          direction: DismissDirection.endToStart,
+          onDismissed: (direction) => _showDeleteConfirmation(food),
+          confirmDismiss: (DismissDirection direction) async {
+            return await showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: Text('Xác nhận xóa'),
+                  content: Text('Bạn có chắc chắn muốn xóa thực phẩm này không?'),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text('Hủy'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: Text('Xóa'),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+          child: Card(
+            elevation: 2,
+            margin: EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListTile(
+              contentPadding: EdgeInsets.all(16),
+              leading: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Color(0xFFBF4E19).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.food_bank,
+                  color: Color(0xFFBF4E19),
+                ),
+              ),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      food['itemName']?.toString() ?? 'Không có tên',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  // if (_isExpiringSoon(expiryDate))
+                  //   Container(
+                  //     margin: EdgeInsets.only(left: 8.w),
+                  //     padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  //     decoration: BoxDecoration(
+                  //       color: Colors.orange.withOpacity(0.2),
+                  //       borderRadius: BorderRadius.circular(4.r),
+                  //     ),
+                  //     child: Text(
+                  //       'Sắp hết hạn',
+                  //       style: TextStyle(
+                  //         color: Colors.orange,
+                  //         fontSize: 12.sp,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // if (_isExpired(expiryDate))
+                  //   Container(
+                  //     margin: EdgeInsets.only(left: 8.w),
+                  //     padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  //     decoration: BoxDecoration(
+                  //       color: Colors.red.withOpacity(0.2),
+                  //       borderRadius: BorderRadius.circular(4.r),
+                  //     ),
+                  //     child: Text(
+                  //       'Đã hết hạn',
+                  //       style: TextStyle(
+                  //         color: Colors.red,
+                  //         fontSize: 12.sp,
+                  //       ),
+                  //     ),
+                  //   ),
+                ],
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 4.h),
+                  Text('Số lượng: ${food['quantity']?.toString() ?? '0'}'),
+                  Text(
+                    'Hết hạn: ${DateFormat('dd/MM/yyyy').format(expiryDate)}',
+                    style: TextStyle(
+                      color: _isExpiringSoon(expiryDate) ? Colors.orange :
+                      _isExpired(expiryDate) ? Colors.red : Colors.grey[600],
+                    ),
+                  ),
+                  if (food['note'] != null && food['note'].toString().isNotEmpty)
+                    Text('Ghi chú: ${food['note']}'),
+                ],
+              ),
+              trailing: IconButton(
+                icon: Icon(Icons.edit, color: Colors.blue),
+                onPressed: () => _showUpdateFoodDialog(food),
               ),
             ),
           ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: foods.length,
-              itemBuilder: (context, index) {
-                final food = foods[index];
-                return ListTile(
-                  title: Text(food['name'] ?? 'Unnamed Food'),
-                  subtitle: Text('Loại: ${food['category'] ?? 'Unknown'}'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    onFoodSelected(food);
-                  },
-                );
-              },
-            ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showDeleteConfirmation(Map<String, dynamic> food) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Xác nhận xóa'),
+        content: Text('Bạn có chắc chắn muốn xóa ${food['foodName']} không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Xóa', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+
+    if (confirmed == true) {
+      setState(() {
+        _fridgeFoods.removeWhere((item) => item['id'] == food['id']);
+      });
+      await _saveFridgeFoods(); // Lưu sau khi xóa
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã xóa thực phẩm thành công')),
+      );
+    }
+  }
+
+  Future<void> _showAddFoodDialog() async {
+    final selectedFood = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => SelectFoodDialog(),
+    );
+
+    print('Selected Food: $selectedFood');
+
+    if (selectedFood != null) {
+      final result = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (context) => AddFoodToFridgeDialog(selectedFood: selectedFood),
+      );
+
+      print('Dialog Result: $result');
+
+      if (result != null) {
+        setState(() {
+          _fridgeFoods.add({
+            'id': DateTime.now().toString(),
+            'itemName': result['food']['name'],
+            'quantity': result['quantity'],
+            'useWithin': result['useWithin'],
+            'note': result['note'] ?? '',
+            'createdAt': DateTime.now().toIso8601String(),
+          });
+        });
+
+        await _saveFridgeFoods();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Đã thêm thực phẩm vào tủ lạnh')),
+        );
+        // try {
+        //   final food = result['food'] as Map<String, dynamic>;
+        //   final String? foodId = food['_id']?.toString();
+        //
+        //   print('Adding food with details:');
+        //   print('Food ID: $foodId');
+        //   print('Quantity: ${result['quantity']}');
+        //   print('Use Within: ${result['useWithin']}');
+        //   print('Note: ${result['note']}');
+        //
+        //   if (foodId == null || foodId.isEmpty) {
+        //     ScaffoldMessenger.of(context).showSnackBar(
+        //       SnackBar(content: Text('Food ID không hợp lệ')),
+        //     );
+        //     return;
+        //   }
+        //
+        //   // Ensure quantity and useWithin are integers
+        //   final quantity = int.tryParse(result['quantity'].toString());
+        //   final useWithin = int.tryParse(result['useWithin'].toString());
+        //
+        //   if (quantity == null || useWithin == null) {
+        //     ScaffoldMessenger.of(context).showSnackBar(
+        //       SnackBar(content: Text('Số lượng hoặc thời hạn sử dụng không hợp lệ')),
+        //     );
+        //     return;
+        //   }
+        //
+        //   final newItem = await _fridgeApiService.createFridgeItem(
+        //     foodId: foodId,
+        //     quantity: quantity,
+        //     useWithin: useWithin,
+        //     note: result['note'] ?? '',
+        //   );
+        //
+        //   if (newItem != null) {
+        //     await _fetchFridgeFoods();
+        //     ScaffoldMessenger.of(context).showSnackBar(
+        //       SnackBar(content: Text('Đã thêm thực phẩm vào tủ lạnh')),
+        //     );
+        //   } else {
+        //     throw Exception('Không thể thêm thực phẩm: Vui lòng kiểm tra lại thông tin');
+        //   }
+        // } catch (e) {
+        //   print('Error in _showAddFoodDialog: $e');
+        //   ScaffoldMessenger.of(context).showSnackBar(
+        //     SnackBar(content: Text('Thêm thực phẩm thất bại: ${e.toString()}')),
+        //   );
+        // }
+      }
+    }
+  }
+
+  Future<void> _showUpdateFoodDialog(Map<String, dynamic> food) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => UpdateFoodInFridgeDialog(food: food),
+    );
+
+    if (result != null) {
+      setState(() {
+        final index = _fridgeFoods.indexWhere((item) => item['id'] == food['id']);
+        if (index != -1) {
+          _fridgeFoods[index] = {
+            ..._fridgeFoods[index],
+            'quantity': result['quantity'],
+            'useWithin': result['useWithin'],
+            'note': result['note'] ?? '',
+          };
+        }
+      });
+      await _saveFridgeFoods(); // Lưu sau khi cập nhật
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã cập nhật thực phẩm thành công')),
+      );
+    }
   }
 }

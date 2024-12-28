@@ -1,32 +1,81 @@
 import 'dart:convert';
-import 'dart:ffi';
-import 'package:food/services/login_api_service.dart';
 import 'package:http/http.dart' as http;
-
 import '../ui/pages/login/login_page.dart';
 
 class FridgeApiService {
   final String _baseUrl = 'http://10.0.2.2:8080/it4788';
 
-  Future<String?> createFood({
-    required String foodName,
+  Future<Map<String, dynamic>?> createFridgeItem({
+    // required String itemName,
     required int useWithin,
     required int quantity,
     required String foodId,
-
+    required String note,
   }) async {
     final url = Uri.parse('$_baseUrl/fridge');
     try {
+      print('Creating fridge item with:');
+      print('foodId: $foodId');
+      print('quantity: $quantity');
+      print('useWithin: $useWithin');
+      print('note: $note');
+
       final response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Bearer ${LoginApiService().accessToken}',
+          'Authorization': 'Bearer $globalToken',
         },
         body: {
-          'foodName': foodName,
+          // 'itemName': itemName,
           'useWithin': useWithin.toString(),
           'quantity': quantity.toString(),
+          'foodId': foodId,
+          'note': note,
+        },
+      );
+
+      print('Response status code: ${response.statusCode}'); // Log status code
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'id': data['newFridgeItem']['id'].toString(),
+          'quantity': data['newFridgeItem']['quantity'],
+          'note': data['newFridgeItem']['note'],
+        };
+      } else {
+        print('Error response: ${response.body}');
+        return null;
+      }
+    } catch (err) {
+      print('API Error: $err');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> updateFridgeItem({
+    // required String itemName,
+    required int useWithin,
+    required int quantity,
+    required String id,
+    required String note,
+  }) async {
+    final url = Uri.parse('$_baseUrl/fridge');
+    try {
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Bearer $globalToken',
+        },
+        body: {
+          // 'itemName': itemName,
+          'useWithin': useWithin.toString(),
+          'quantity': quantity.toString(),
+          'id': id,
+          'note': note,
         },
       );
 
@@ -35,7 +84,17 @@ class FridgeApiService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        return data['_id']['\$oid'];
+        return {
+          'id': data['newFridgeItem']['id'].toString(),
+          // 'expiredDate': data['newFridgeItem']['expiredDate'],
+          'quantity': data['newFridgeItem']['quantity'],
+          'note': data['newFridgeItem']['note'],
+          // 'startDate': data['newFridgeItem']['startDate'],
+          // 'createdAt': data['newFridgeItem']['createdAt'],
+          // 'updatedAt': data['newFridgeItem']['updatedAt'],
+          // 'foodId': data['newFridgeItem']['FoodId'].toString(),
+          // 'userId': data['newFridgeItem']['UserId'].toString(),
+        };
       } else {
         print('Error: ${response.statusCode} - ${response.reasonPhrase}');
         return null;
@@ -46,43 +105,40 @@ class FridgeApiService {
     }
   }
 
-  Future<String?> updateFood({
-    required String newFoodName,
-    required int newUseWithin,
-    required int newQuantity,
-    String newNote = '',
-    required String itemId,
+  Future<bool> deleteFridgeItem({
+    required String id,
   }) async {
-    final url = Uri.parse('$_baseUrl/fridge');
+    final url = Uri.parse('$_baseUrl/fridge/$id');
     try {
-      final response = await http.put(
+      final response = await http.delete(
         url,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Bearer ${LoginApiService().accessToken}',
+          'Authorization': 'Bearer $globalToken',
         },
         body: {
-          'foodName': newFoodName,
-          'useWithin': newUseWithin.toString(),
-          'quantity': newQuantity.toString(),
-          'note': newNote,
-          'itemId': itemId,
+          'id': id,
         },
       );
 
-      // print('Response Status Code: ${response.statusCode}');
-      // print('Response Body: ${response.body}');
+      print('Delete Response Body: ${response.body}');
+      print('Delete Status Code: ${response.statusCode}');
 
+      // Parse response body để kiểm tra message
+      final responseData = jsonDecode(response.body);
+      print('Delete Response Data: $responseData');
+
+      // Kiểm tra cả status code và message từ API
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        return data['_id']['\$oid'];
+        print('Delete operation successful');
+        return true;
       } else {
-        print('Error: ${response.statusCode} - ${response.reasonPhrase}');
-        return null;
+        print('Delete operation failed with status: ${response.statusCode}');
+        return false;
       }
     } catch (err) {
-      print('Detailed Error: $err');
-      return null;
+      print('Delete Error: $err');
+      return false;
     }
   }
 

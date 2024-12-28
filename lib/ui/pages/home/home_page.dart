@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../gen/assets.gen.dart';
 import '../../../services/recipe_api_service.dart';
@@ -10,6 +9,8 @@ import '../fridge/fridge_page.dart';
 import '../recipe/meal_recipe_page.dart';
 
 class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -17,24 +18,41 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   List<Map<String, dynamic>> _recipes = [];
+  List<Map<String, dynamic>> _shoppingItems = [];
+  final RecipeApiService _apiService = RecipeApiService();
 
   @override
   void initState() {
     super.initState();
     _fetchRecipes();
+    _loadShoppingItems();
   }
 
   Future<void> _fetchRecipes() async {
-    final RecipeApiService apiService = RecipeApiService();
-    List<Map<String, dynamic>>? recipes = await apiService.getAllRecipes();
-    print('Fetched Recipes: $recipes'); // In ra danh sách công thức
-    if (recipes != null) {
-      setState(() {
-        _recipes = recipes;
-      });
-    } else {
-      print('No recipes found or error occurred'); // Thông báo nếu không có công thức
+    try {
+      final List<Map<String, dynamic>>? recipes = await _apiService.getAllRecipes();
+      print('Fetched Recipes from API: $recipes'); // Kiểm tra dữ liệu từ API
+      if (mounted) {
+        setState(() {
+          _recipes = recipes ?? [];
+        });
+      }
+    } catch (e) {
+      print('Error fetching recipes: $e');
     }
+  }
+
+  void _loadShoppingItems() {
+    setState(() {
+      _shoppingItems = ShoppingPage.getShoppingItems(context); // Updated to call ShoppingPage directly
+    });
+  }
+
+  // Replace the existing _updateShoppingItems method with this:
+  void _updateShoppingItems() {
+    setState(() {
+      _shoppingItems = ShoppingPage.getShoppingItems(context);
+    });
   }
 
   void _navigateToTab(int index) {
@@ -47,8 +65,8 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       HomeContent(onNavigateToTab: (index) => _navigateToTab(index), recipes: _recipes),
-      ShoppingPage(),
-      FridgePage(),
+      const ShoppingPage(),
+      const FridgePage(),
       SchedulePage(),
     ];
     return Scaffold(
@@ -136,7 +154,76 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
-  List<Map<String, dynamic>> get recipes => widget.recipes;
+  List<Map<String, dynamic>> get recipes {
+    print('Current recipes: $widget.recipes'); // Kiểm tra dữ liệu
+    return widget.recipes;
+  }
+  List<Map<String, dynamic>> _shoppingItems = [];
+  List<Map<String, dynamic>> _expiringFoods = [];
+  List<Map<String, dynamic>> _mealRecipes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadShoppingItems();
+    _loadExpiringFoods();
+    _loadMealRecipes();
+  }
+
+  void _loadMealRecipes() {
+    setState(() {
+      _mealRecipes = [
+        {
+          'name': 'Cơm chiên hải sản',
+          'description': 'Món cơm chiên với tôm, mực, rau củ.',
+          'image': Assets.images.imgMonan1.path,
+          'cookingTime': '30 phút',
+        },
+        {
+          'name': 'Canh chua cá lóc',
+          'description': 'Món canh chua đậm đà với cá lóc và rau.',
+          'image': Assets.images.imgMonan1.path,
+          'cookingTime': '25 phút',
+        },
+        {
+          'name': 'Gỏi cuốn tôm thịt',
+          'description': 'Món gỏi cuốn tươi ngon với tôm và thịt.',
+          'image': Assets.images.imgMonan1.path,
+          'cookingTime': '20 phút',
+        },
+        {
+          'name': 'Bò lúc lắc',
+          'description': 'Thịt bò xào với ớt chuông và hành tây.',
+          'image': Assets.images.imgMonan1.path,
+          'cookingTime': '15 phút',
+        },
+        {
+          'name': 'Bún thịt nướng',
+          'description': 'Bún ăn kèm thịt nướng và nước mắm.',
+          'image': Assets.images.imgMonan1.path,
+          'cookingTime': '40 phút',
+        },
+      ];
+    });
+  }
+
+  void _loadExpiringFoods() {
+    setState(() {
+      _expiringFoods = [
+        {'name': 'Thịt bò', 'daysLeft': 2},
+        {'name': 'Sữa tươi', 'daysLeft': 1},
+        {'name': 'Rau xà lách', 'daysLeft': 3},
+        {'name': 'Cá hồi', 'daysLeft': 5},
+        {'name': 'Trứng gà', 'daysLeft': 4},
+      ];
+    });
+  }
+
+  void _loadShoppingItems() {
+    setState(() {
+      _shoppingItems = ShoppingPage.getShoppingItems(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -296,8 +383,9 @@ class _HomeContentState extends State<HomeContent> {
             height: 120,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: 5, // Placeholder item count
+              itemCount: _expiringFoods.length,
               itemBuilder: (context, index) {
+                final food = _expiringFoods[index];
                 return Container(
                   width: 200,
                   margin: EdgeInsets.only(right: 16),
@@ -311,7 +399,7 @@ class _HomeContentState extends State<HomeContent> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Thịt bò',
+                        food['name'] ?? 'Không xác định',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -319,7 +407,7 @@ class _HomeContentState extends State<HomeContent> {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Còn 2 ngày',
+                        'Còn ${food['daysLeft']} ngày',
                         style: TextStyle(
                           color: Colors.red,
                           fontWeight: FontWeight.w500,
@@ -362,9 +450,7 @@ class _HomeContentState extends State<HomeContent> {
                   ).then((_) {
                     // Refresh recipe list after creation
                     if (mounted) {
-                      setState(() {
-                        widget.onNavigateToTab(0);
-                      });
+                      setState(() {});
                     }
                   });
                 },
@@ -375,24 +461,24 @@ class _HomeContentState extends State<HomeContent> {
           SizedBox(height: 16),
           Container(
             height: 200,
-            child: recipes.isEmpty
+            child: _mealRecipes.isEmpty
                 ? Center(
               child: Text('Chưa có công thức nào'),
             )
                 : ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: recipes.length,
+              itemCount: _mealRecipes.length,
               itemBuilder: (context, index) {
-                final recipe = recipes[index];
+                final recipe = _mealRecipes[index];
                 return GestureDetector(
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => MealRecipePage(
-                          mealName: recipe['name'] ?? '',
-                          recipeDetails: recipe['description'] ?? '',
-                          cookingTime: '20 phút',
+                          mealName: recipe['name'] ?? 'Không có tên',
+                          recipeDetails: recipe['description'] ?? 'Không có mô tả',
+                          cookingTime: recipe['cookingTime'] ?? 'Không rõ thời gian',
                         ),
                       ),
                     );
@@ -403,7 +489,7 @@ class _HomeContentState extends State<HomeContent> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       image: DecorationImage(
-                        image: AssetImage(Assets.images.imgMonan1.path),
+                        image: AssetImage(recipe['image']),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -425,7 +511,7 @@ class _HomeContentState extends State<HomeContent> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            recipe['name'] ?? '',
+                            recipe['name'] ?? 'Không có tên',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -436,7 +522,7 @@ class _HomeContentState extends State<HomeContent> {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            recipe['description'] ?? '',
+                            recipe['description'] ?? 'Không có mô tả',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 12,
@@ -446,7 +532,7 @@ class _HomeContentState extends State<HomeContent> {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            '20 phút',
+                            recipe['cookingTime'] ?? 'Không rõ thời gian',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 12,
@@ -482,35 +568,75 @@ class _HomeContentState extends State<HomeContent> {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () => widget.onNavigateToTab(1),
                 child: Text('Xem tất cả'),
               ),
             ],
           ),
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: 3,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  leading: Checkbox(
-                    value: false,
-                    onChanged: (value) {},
+          ListView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            itemCount: _shoppingItems.length > 3 ? 3 : _shoppingItems.length,
+            itemBuilder: (context, index) {
+              final item = _shoppingItems[index];
+              return Card(
+                elevation: 2,
+                margin: EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  contentPadding: EdgeInsets.all(16),
+                  leading: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Color(0xFFBF4E19).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.shopping_basket,
+                      color: Color(0xFFBF4E19),
+                    ),
                   ),
-                  title: Text('Rau cải'),
-                  subtitle: Text('2 bó'),
-                  trailing: Text('15.000đ'),
-                );
-              },
-            ),
+                  title: Text(
+                    item['name']?.toString() ?? 'Không có tên',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Số lượng: ${item['quantity']?.toString() ?? '0'} ${item['unit']}\n'
+                        'Danh mục: ${item['category']}',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () {
+                      // Navigate to shopping page for editing
+                      widget.onNavigateToTab(1);
+                    },
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
     );
+  }
+
+  void _navigateToShoppingPage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ShoppingPage(),
+      ),
+    ).then((_) {
+      _loadShoppingItems(); // Reload shopping items when returning
+    });
   }
 }
