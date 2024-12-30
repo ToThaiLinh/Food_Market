@@ -8,7 +8,6 @@ import '../../../bloc/user/user_event.dart';
 import '../../../bloc/user/user_state.dart';
 import '../../../models/user.dart';
 import '../../../services/user_service.dart';
-import 'change_password_page.dart';
 
 class MePage extends StatelessWidget {
   @override
@@ -194,100 +193,99 @@ class MeView extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
 
-// User Info Page
-class UserInfoPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Thông tin người dùng', style: TextStyle(color: Colors.white)),
-        backgroundColor: Color(0xFFBF4E19),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            ListTile(
-              title: Text('Tên đăng nhập'),
-              subtitle: Text('foodfamily_012'),
-            ),
-            ListTile(
-              title: Text('Số điện thoại'),
-              subtitle: Text('******012'),
-              trailing: Icon(Icons.edit),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => UpdatePhonePage()),
-                );
-              },
-            ),
-            ListTile(
-              title: Text('Tên'),
-              subtitle: Text('Nguyen Van A'),
-            ),
-            ListTile(
-              title: Text('Email'),
-              subtitle: Text('Cập nhật ngay'),
-              trailing: Icon(Icons.edit),
-            ),
-            ListTile(
-              title: Text('Giới tính'),
-              subtitle: Text('Cập nhật ngay'),
-              trailing: Icon(Icons.edit),
-            ),
-            ListTile(
-              title: Text('Ngày sinh'),
-              subtitle: Text('Cập nhật ngay'),
-              trailing: Icon(Icons.edit),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// // User Info Page
+// class UserInfoPage extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: Text('Thông tin người dùng', style: TextStyle(color: Colors.white)),
+//         backgroundColor: Color(0xFFBF4E19),
+//       ),
+//       body: Padding(
+//         padding: const EdgeInsets.all(16.0),
+//         child: Column(
+//           children: [
+//             ListTile(
+//               title: Text('Tên đăng nhập'),
+//               subtitle: Text('foodfamily_012'),
+//             ),
+//             ListTile(
+//               title: Text('Số điện thoại'),
+//               subtitle: Text('******012'),
+//               trailing: Icon(Icons.edit),
+//               onTap: () {
+//                 Navigator.push(
+//                   context,
+//                   MaterialPageRoute(builder: (context) => UpdatePhonePage()),
+//                 );
+//               },
+//             ),
+//             ListTile(
+//               title: Text('Tên'),
+//               subtitle: Text('Nguyen Van A'),
+//             ),
+//             ListTile(
+//               title: Text('Email'),
+//               subtitle: Text('Cập nhật ngay'),
+//               trailing: Icon(Icons.edit),
+//             ),
+//             ListTile(
+//               title: Text('Giới tính'),
+//               subtitle: Text('Cập nhật ngay'),
+//               trailing: Icon(Icons.edit),
+//             ),
+//             ListTile(
+//               title: Text('Ngày sinh'),
+//               subtitle: Text('Cập nhật ngay'),
+//               trailing: Icon(Icons.edit),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
 
-// Update Phone Page
-class UpdatePhonePage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Số điện thoại', style: TextStyle(color: Colors.white)),
-        backgroundColor: Color(0xFFBF4E19),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            ListTile(
-              title: Text('Số điện thoại hiện tại'),
-              subtitle: Text('******012'),
-            ),
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Cập nhật số điện thoại',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                minimumSize: Size(double.infinity, 50),
-              ),
-              onPressed: () {},
-              child: Text('Tiếp tục', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// // Update Phone Page
+// class UpdatePhonePage extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: Text('Số điện thoại', style: TextStyle(color: Colors.white)),
+//         backgroundColor: Color(0xFFBF4E19),
+//       ),
+//       body: Padding(
+//         padding: const EdgeInsets.all(16.0),
+//         child: Column(
+//           children: [
+//             ListTile(
+//               title: Text('Số điện thoại hiện tại'),
+//               subtitle: Text('******012'),
+//             ),
+//             TextField(
+//               decoration: InputDecoration(
+//                 labelText: 'Cập nhật số điện thoại',
+//                 border: OutlineInputBorder(),
+//               ),
+//             ),
+//             SizedBox(height: 16),
+//             ElevatedButton(
+//               style: ElevatedButton.styleFrom(
+//                 backgroundColor: Colors.orange,
+//                 minimumSize: Size(double.infinity, 50),
+//               ),
+//               onPressed: () {},
+//               child: Text('Tiếp tục', style: TextStyle(color: Colors.white)),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }

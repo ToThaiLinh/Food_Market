@@ -47,8 +47,8 @@ class ShoppingBloc extends Bloc<ShoppingEvent, ShoppingState> {
           name: event.item['name'],
           category: event.item['category'],
           unit: event.item['unit'],
-          quantity: event.item['quantity'],
           id: event.item['id'],
+          userIdCreate: '',
         );
 
         if (result != null) {
@@ -79,7 +79,7 @@ class ShoppingBloc extends Bloc<ShoppingEvent, ShoppingState> {
           name: event.item['name'],
           category: event.item['category'],
           unit: event.item['unit'],
-          quantity: event.item['quantity'],
+          userIdCreate: '',
         );
 
         if (result != null) {
