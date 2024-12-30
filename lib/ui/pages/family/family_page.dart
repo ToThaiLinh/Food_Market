@@ -1,7 +1,12 @@
-// family_group_screen.dart
 import 'package:flutter/material.dart';
-
 import 'group_detail_page.dart';
+
+class FamilyPage extends StatefulWidget {
+  const FamilyPage({super.key});
+
+  @override
+  _FamilyPageState createState() => _FamilyPageState();
+}
 
 class FamilyMember {
   final String name;
@@ -17,171 +22,186 @@ class FamilyMember {
   });
 }
 
-class FamilyPage extends StatefulWidget {
-  @override
-  _FamilyPageState createState() => _FamilyPageState();
+class Group {
+  final String id;
+  final String name;
+  final String lastUpdated;
+  final List<FamilyMember> members;
+
+  Group({
+    required this.id,
+    required this.name,
+    required this.lastUpdated,
+    required this.members,
+  });
 }
 
 class _FamilyPageState extends State<FamilyPage> {
-  List<String> shoppingLists = [];
-  String newListName = '';
-  String groupName = 'Nhóm Gia Đình';
-  final List<FamilyMember> members = [
-    // FamilyMember(
-    //   name: 'Nguyễn Văn A',
-    //   role: 'Trưởng nhóm',
-    //   avatar: 'assets/avatar1.png',
-    // ),
-    // FamilyMember(
-    //   name: 'Nguyễn Thị B',
-    //   role: 'Thành viên',
-    //   avatar: 'assets/avatar2.png',
-    // ),
-    // Add more members as needed
-  ];
+  List<Group> groups = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeGroups();
+  }
+
+  void _initializeGroups() {
+    groups = [
+      Group(
+        id: '1',
+        name: 'Gia đình',
+        lastUpdated: 'Hôm nay',
+        members: [
+          FamilyMember(
+            name: 'Nguyễn Văn A',
+            role: 'Bố',
+            avatar: 'assets/avatar1.png',
+            email: 'nguyenvana@gmail.com',
+          ),
+          FamilyMember(
+            name: 'Nguyễn Thị B',
+            role: 'Mẹ',
+            avatar: 'assets/avatar2.png',
+            email: 'nguyenthib@gmail.com',
+          ),
+        ],
+      ),
+      Group(
+        id: '2',
+        name: 'Nhóm bạn thân',
+        lastUpdated: 'Hôm qua',
+        members: [
+          FamilyMember(
+            name: 'Trần Văn C',
+            role: 'Thành viên',
+            avatar: 'assets/avatar3.png',
+            email: 'tranvanc@gmail.com',
+          ),
+          FamilyMember(
+            name: 'Lê Thị D',
+            role: 'Thành viên',
+            avatar: 'assets/avatar4.png',
+            email: 'lethid@gmail.com',
+          ),
+        ],
+      ),
+      Group(
+        id: '3',
+        name: 'Nhóm công việc',
+        lastUpdated: '2 ngày trước',
+        members: [
+          FamilyMember(
+            name: 'Phạm Văn E',
+            role: 'Trưởng nhóm',
+            avatar: 'assets/avatar5.png',
+            email: 'phamvane@gmail.com',
+          ),
+          FamilyMember(
+            name: 'Hoàng Thị F',
+            role: 'Thành viên',
+            avatar: 'assets/avatar6.png',
+            email: 'hoangthif@gmail.com',
+          ),
+        ],
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Nhóm Gia Đình'),
-        automaticallyImplyLeading: false,
-      ),
-      body: Column(
-        children: [
-          _buildSharedLists(),
+        title: Text('Quản lý nhóm'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.add),
+            onPressed: () => _showAddGroupDialog(context),
+          ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.add),
-        onPressed: () {
-          _showCreateGroupDialog();
-        },
-      ),
+      body: _buildSharedLists(),
     );
   }
 
   Widget _buildSharedLists() {
-    return Expanded(
-      flex: 2,
-      child: Container(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Danh sách nhóm chia sẻ',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+    return Container(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Danh sách nhóm chia sẻ',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
-            SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: shoppingLists.length,
-                itemBuilder: (context, index) {
-                  return GestureDetector(
+          ),
+          SizedBox(height: 16),
+          Expanded(
+            child: ListView.builder(
+              itemCount: groups.length,
+              itemBuilder: (context, index) {
+                final group = groups[index];
+                return Card(
+                  margin: EdgeInsets.only(bottom: 8),
+                  child: ListTile(
                     onTap: () {
-                      // Chuyển hướng đến GroupDetailPage
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => GroupDetailPage(
-                            members: members,
+                            members: group.members, groupName: group.name,
                           ),
                         ),
                       );
                     },
-                    child: Card(
-                      child: ListTile(
-                        title: Text(shoppingLists[index]),
-                        subtitle: Text('Cập nhật lần cuối: 2 giờ trước'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.share),
-                              onPressed: () {
-                                // Handle share
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.edit),
-                              onPressed: () {
-                                _showEditGroupDialog(shoppingLists[index]);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
+                    title: Text(
+                      group.name,
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  );
-                },
-              ),
+                    subtitle: Text('Cập nhật lần cuối: ${group.lastUpdated}'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.share),
+                          onPressed: () {
+                            // Xử lý chia sẻ
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.edit),
+                          onPressed: () => _showEditGroupDialog(group.id, group.name),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete),
+                          onPressed: () => _showDeleteConfirmDialog(group.id, group.name),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showEditGroupDialog(String currentGroupName) {
-    TextEditingController controller = TextEditingController(text: currentGroupName);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Chỉnh sửa tên nhóm'),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: 'Tên nhóm',
-          ),
-        ),
-        actions: [
-          TextButton(
-            child: Text('Hủy'),
-            onPressed: () => Navigator.pop(context),
-          ),
-          ElevatedButton(
-            child: Text('Lưu'),
-            onPressed: () {
-              setState(() {
-                // Cập nhật tên nhóm trong shoppingLists
-                int index = shoppingLists.indexOf(currentGroupName);
-                if (index != -1) {
-                  shoppingLists[index] = controller.text; // Cập nhật tên nhóm
-                }
-              });
-              Navigator.pop(context);
-            },
           ),
         ],
       ),
     );
   }
 
-  void _showAddMemberDialog() {
+  void _showAddGroupDialog(BuildContext context) {
+    final nameController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Thêm thành viên mới'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Tên thành viên',
-              ),
-            ),
-            SizedBox(height: 16),
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Email',
-              ),
-            ),
-          ],
+        title: Text('Thêm nhóm mới'),
+        content: TextField(
+          controller: nameController,
+          decoration: InputDecoration(
+            labelText: 'Tên nhóm',
+            border: OutlineInputBorder(),
+          ),
         ),
         actions: [
           TextButton(
@@ -191,8 +211,21 @@ class _FamilyPageState extends State<FamilyPage> {
           ElevatedButton(
             child: Text('Thêm'),
             onPressed: () {
-              // Handle add member
-              Navigator.pop(context);
+              if (nameController.text.isNotEmpty) {
+                final newGroup = Group(
+                  id: (groups.length + 1).toString(),
+                  name: nameController.text,
+                  lastUpdated: 'Vừa tạo',
+                  members: [],
+                );
+                setState(() {
+                  groups.add(newGroup);
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Đã thêm nhóm ${nameController.text}')),
+                );
+              }
             },
           ),
         ],
@@ -200,29 +233,19 @@ class _FamilyPageState extends State<FamilyPage> {
     );
   }
 
-  void _showEditMemberDialog(FamilyMember member) {
-    // Implementation for editing member
+  void _showEditGroupDialog(String groupId, String currentName) {
+    final nameController = TextEditingController(text: currentName);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Chỉnh sửa thành viên'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Tên thành viên',
-                hintText: member.name,
-              ),
-            ),
-            SizedBox(height: 16),
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Email',
-                hintText: 'Email của ${member.name}',
-              ),
-            ),
-          ],
+        title: Text('Sửa tên nhóm'),
+        content: TextField(
+          controller: nameController,
+          decoration: InputDecoration(
+            labelText: 'Tên nhóm',
+            border: OutlineInputBorder(),
+          ),
         ),
         actions: [
           TextButton(
@@ -232,8 +255,23 @@ class _FamilyPageState extends State<FamilyPage> {
           ElevatedButton(
             child: Text('Lưu'),
             onPressed: () {
-              // Handle save changes
-              Navigator.pop(context);
+              if (nameController.text.isNotEmpty) {
+                setState(() {
+                  final index = groups.indexWhere((g) => g.id == groupId);
+                  if (index != -1) {
+                    groups[index] = Group(
+                      id: groups[index].id,
+                      name: nameController.text,
+                      lastUpdated: 'Vừa cập nhật',
+                      members: groups[index].members,
+                    );
+                  }
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Đã cập nhật tên nhóm')),
+                );
+              }
             },
           ),
         ],
@@ -241,58 +279,31 @@ class _FamilyPageState extends State<FamilyPage> {
     );
   }
 
-  void _showDeleteConfirmationDialog(FamilyMember member) {
+  void _showDeleteConfirmDialog(String groupId, String groupName) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Xác nhận xóa'),
-        content: Text('Bạn có chắc chắn muốn xóa ${member.name}?'),
+        content: Text('Bạn có chắc chắn muốn xóa nhóm "$groupName"?'),
         actions: [
           TextButton(
             child: Text('Hủy'),
             onPressed: () => Navigator.pop(context),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: Text('Xóa'),
             onPressed: () {
-              // Handle delete member
+              setState(() {
+                groups.removeWhere((group) => group.id == groupId);
+              });
               Navigator.pop(context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCreateGroupDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Tạo nhóm mua sắm mới'),
-        content: TextField(
-          decoration: InputDecoration(
-            labelText: 'Tên nhóm',
-          ),
-          onChanged: (value) {
-            // Lưu tên danh sách vào biến
-            newListName = value; // newListName là biến để lưu tên danh sách
-          },
-        ),
-        actions: [
-          TextButton(
-            child: Text('Hủy'),
-            onPressed: () => Navigator.pop(context),
-          ),
-          ElevatedButton(
-            child: Text('Tạo'),
-            onPressed: () {
-              // Thêm danh sách mới vào danh sách shoppingLists
-              if (newListName.isNotEmpty) {
-                setState(() {
-                  shoppingLists.add(newListName);
-                });
-                Navigator.pop(context);
-              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Đã xóa nhóm $groupName')),
+              );
             },
           ),
         ],
