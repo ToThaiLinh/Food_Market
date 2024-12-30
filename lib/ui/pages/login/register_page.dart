@@ -179,8 +179,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
         if (verificationCode != null && verificationCode.isNotEmpty) {
           // Lấy id từ response
-          if (response['data'] != null && response['data']['_id'] != null) {
-            String userId = response['data']['_id'];
+          if (response['data'] != null && response['data']['id'] != null) {
+            String userId = response['data']['id'];
 
             // Gửi mã xác thực lên server
             final verificationResponse = await apiService.verifyEmail(

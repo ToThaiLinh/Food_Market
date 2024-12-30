@@ -57,7 +57,7 @@ class RegisterApiService {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: {
-        '_id': id,
+        'id': id,
         'code': code,
       },
     );
