@@ -60,8 +60,13 @@ class MeView extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 40,
-                  backgroundColor: Theme.of(context).primaryColor,
-                  child: Icon(Icons.person, size: 40, color: Colors.white),
+                  backgroundImage: NetworkImage(
+                      'https://chiemtaimobile.vn/images/companies/1/%E1%BA%A2nh%20Blog/avatar-facebook-dep/Anh-avatar-hoat-hinh-de-thuong-xinh-xan.jpg?1704788263223 // Use NetworkImage here'
+                  ),
+                  onBackgroundImageError: (exception, stackTrace) {
+                    print('Failed to load image: $exception');
+                  },
+                  child: null, // Optional child widget if no image
                 ),
                 SizedBox(width: 16),
                 Column(
@@ -196,96 +201,3 @@ class MeView extends StatelessWidget {
       );
   }
 }
-
-// // User Info Page
-// class UserInfoPage extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text('Thông tin người dùng', style: TextStyle(color: Colors.white)),
-//         backgroundColor: Color(0xFFBF4E19),
-//       ),
-//       body: Padding(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Column(
-//           children: [
-//             ListTile(
-//               title: Text('Tên đăng nhập'),
-//               subtitle: Text('foodfamily_012'),
-//             ),
-//             ListTile(
-//               title: Text('Số điện thoại'),
-//               subtitle: Text('******012'),
-//               trailing: Icon(Icons.edit),
-//               onTap: () {
-//                 Navigator.push(
-//                   context,
-//                   MaterialPageRoute(builder: (context) => UpdatePhonePage()),
-//                 );
-//               },
-//             ),
-//             ListTile(
-//               title: Text('Tên'),
-//               subtitle: Text('Nguyen Van A'),
-//             ),
-//             ListTile(
-//               title: Text('Email'),
-//               subtitle: Text('Cập nhật ngay'),
-//               trailing: Icon(Icons.edit),
-//             ),
-//             ListTile(
-//               title: Text('Giới tính'),
-//               subtitle: Text('Cập nhật ngay'),
-//               trailing: Icon(Icons.edit),
-//             ),
-//             ListTile(
-//               title: Text('Ngày sinh'),
-//               subtitle: Text('Cập nhật ngay'),
-//               trailing: Icon(Icons.edit),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-
-// // Update Phone Page
-// class UpdatePhonePage extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text('Số điện thoại', style: TextStyle(color: Colors.white)),
-//         backgroundColor: Color(0xFFBF4E19),
-//       ),
-//       body: Padding(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Column(
-//           children: [
-//             ListTile(
-//               title: Text('Số điện thoại hiện tại'),
-//               subtitle: Text('******012'),
-//             ),
-//             TextField(
-//               decoration: InputDecoration(
-//                 labelText: 'Cập nhật số điện thoại',
-//                 border: OutlineInputBorder(),
-//               ),
-//             ),
-//             SizedBox(height: 16),
-//             ElevatedButton(
-//               style: ElevatedButton.styleFrom(
-//                 backgroundColor: Colors.orange,
-//                 minimumSize: Size(double.infinity, 50),
-//               ),
-//               onPressed: () {},
-//               child: Text('Tiếp tục', style: TextStyle(color: Colors.white)),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }

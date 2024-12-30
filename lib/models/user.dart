@@ -1,24 +1,24 @@
 class User {
-  final String? id;
-  final String? email;
-  final String? password;
-  final String? username;
-  final String? name;
-  final String? type;
-  final String? language;
-  final String? gender;
-  final String? countryCode;
-  final int? timezone;
-  final String? birthDate;
-  final String? photoUrl;
-  final bool? isActivated;
-  final bool? isVerified;
-  final String? deviceId;
-  final int? belongsToGroupAdminId;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
-  final String? accessToken;
-  final String? refreshToken;
+  String? id;
+  String? email;
+  String? password;
+  String? username;
+  String? name;
+  String? type;
+  String? language;
+  String? gender;
+  String? countryCode;
+  int? timezone;
+  String? birthDate;
+  String? photoUrl;
+  bool? isActivated;
+  bool? isVerified;
+  String? deviceId;
+  int? belongsToGroupAdminId;
+  DateTime? createdAt;
+  DateTime? updatedAt;
+  String? accessToken;
+  String? refreshToken;
 
   User({
     this.id,
@@ -56,7 +56,7 @@ class User {
         countryCode: json['user']['countryCode'] ,
         timezone: json['user']['timezone'] ,
         birthDate: json['user']['birthDate'] ,
-        photoUrl: json['user']['photoUrl'] ,
+        photoUrl: json['user']['avatar'] ,
         isActivated: json['user']['isActivated'] ,
         isVerified: json['user']['isVerify'] ,
         deviceId: json['user']['deviceId'],
@@ -66,6 +66,31 @@ class User {
         accessToken: json['accessToken'] ?? "",
         refreshToken: json['refreshToken'] ?? ""
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'password': password,
+      'username': username,
+      'name': name,
+      'type': type,
+      'language': language,
+      'gender': gender,
+      'countryCode': countryCode,
+      'timezone': timezone,
+      'birthDate': birthDate,
+      'photoUrl': photoUrl,
+      'isActivated': isActivated,
+      'isVerified': isVerified,
+      'deviceId': deviceId,
+      'belongsToGroupAdminId': belongsToGroupAdminId,
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'accessToken': accessToken,
+      'refreshToken': refreshToken,
+    };
   }
 
 }

@@ -55,15 +55,16 @@ class UserService {
     }
   }
 
-  Future<void> updateUserInfo(Map<String, dynamic> updateData) async {
+  Future<void> updateUserInfo(User user) async {
+   print(user.toJson());
     try {
-      final response = await http.put(
-        Uri.parse('your_api_url/user/update'),
+      final response = await http.patch(
+        Uri.parse('${_baseUrl}/user'),
         headers: {
           'Authorization': 'Bearer $globalToken',
           'Content-Type': 'application/json',
         },
-        body: json.encode(updateData),
+        body: json.encode(user.toJson()),
       );
 
       if (response.statusCode != 200) {

@@ -1,6 +1,6 @@
 // User Info Page
 import 'package:flutter/material.dart';
-import 'package:food/ui/pages/me/update_phone_page.dart';
+import 'package:food/ui/pages/me/update_page.dart';
 
 import '../../../models/user.dart';
 
@@ -25,32 +25,57 @@ class UserInfoPage extends StatelessWidget {
             ListTile(
               title: Text('Email'),
               subtitle: Text(user.email ?? "Cập nhật ngay"),
-              trailing: Icon(Icons.edit),
+              //trailing: Icon(Icons.edit),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => UpdatePhonePage()),
+                  MaterialPageRoute(builder: (context) => UpdatePage(user: user, title: "Email")),
                 );
               },
             ),
             ListTile(
               title: Text('Tên'),
               subtitle: Text(user.name ?? "Cập nhật ngay"),
+              trailing: Icon(Icons.edit),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => UpdatePage(user: user, title: "Name",)),
+                );
+              },
             ),
             ListTile(
               title: Text('Country'),
               subtitle: Text(user.countryCode ?? "Cập nhật ngay"),
               trailing: Icon(Icons.edit),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => UpdatePage(user: user, title: "Country",)),
+                );
+              },
             ),
             ListTile(
               title: Text('Giới tính'),
               subtitle: Text(user.gender ?? 'Cập nhật ngay'),
               trailing: Icon(Icons.edit),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => UpdatePage(user: user, title: "Giới tính",)),
+                );
+              },
             ),
             ListTile(
               title: Text('Ngày sinh'),
               subtitle: Text(user.birthDate ?? 'Cập nhật ngay'),
               trailing: Icon(Icons.edit),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => UpdatePage(user: user, title: "Ngày sinh",)),
+                );
+              },
             ),
           ],
         ),
