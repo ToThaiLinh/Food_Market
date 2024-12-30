@@ -4,6 +4,7 @@ import '../../../bloc/meal_plan/meal_plan_bloc.dart';
 import '../../../gen/assets.gen.dart';
 import '../../../services/meal_plan_service.dart';
 import '../../../services/recipe_api_service.dart';
+import '../family/family_page.dart';
 import '../me/me_page.dart';
 import '../recipe/create_recipe_page.dart';
 import '../schedule/schedule_page.dart';
@@ -71,6 +72,7 @@ class _HomePageState extends State<HomePage> {
       const ShoppingPage(),
       const FridgePage(),
       SchedulePage(),
+      FamilyPage(),
     ];
     return Scaffold(
       appBar: AppBar(
@@ -132,6 +134,11 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today_outlined),
             activeIcon: Icon(Icons.calendar_today),
+            label: 'Lịch',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.family_restroom_outlined),
+            activeIcon: Icon(Icons.family_restroom),
             label: 'Lịch',
           ),
         ],
@@ -322,9 +329,7 @@ class _HomeContentState extends State<HomeContent> {
                 title: 'Chia sẻ\ngia đình',
                 icon: Icons.group_add,
                 color: Color(0xFF8B5CF6),
-                onTap: () {
-                  // Placeholder for sharing family page
-                },
+                onTap: () => widget.onNavigateToTab(4),
               ),
             ],
           ),
