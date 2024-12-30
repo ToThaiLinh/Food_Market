@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:food/ui/pages/login/register_page.dart';
 import '../../../gen/assets.gen.dart';
+import '../../../models/user.dart';
 import '../../../services/login_api_service.dart';
 import '../home/home_page.dart';
 
@@ -36,12 +37,14 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       // Call login method from UserService
-      final user = await _userService.login(
+      final response = await _userService.login(
           _usernameController.text.trim(),
           _passwordController.text.trim()
       );
 
-      globalToken = user?.accessToken ?? '';
+
+      globalToken = response['accessToken'] ?? '';
+      final user = User.fromJson(response['user']);
       userId = user?.id ?? '';
       print("UserId : $userId");
       print('Global Token: $globalToken');

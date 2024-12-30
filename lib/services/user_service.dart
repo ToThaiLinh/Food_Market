@@ -45,8 +45,7 @@ class UserService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> bodyContent = json.decode(response.body);
-        final user = bodyContent;
-        return User.fromJson(user);
+        return User.fromJson(bodyContent['user']);
       } else {
         throw Exception('Failed to load user info');
       }
@@ -67,7 +66,7 @@ class UserService {
         body: json.encode(user.toJson()),
       );
 
-      if (response.statusCode != 200) {
+      if (response.statusCode != 200 || response.statusCode != 201) {
         throw Exception('Failed to update user info');
       }
     } catch (e) {

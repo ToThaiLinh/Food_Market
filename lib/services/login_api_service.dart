@@ -6,7 +6,7 @@ class LoginApiService {
   String accessToken = '';
   final String _baseUrl = 'http://10.0.2.2:8080/it4788/auth';
 
-  Future<User?> login(String email, String password) async {
+  Future<Map<String, dynamic>> login(String email, String password) async {
     final uri = Uri.parse('$_baseUrl/login');
     try {
       final response = await http.post(
@@ -20,10 +20,9 @@ class LoginApiService {
         final Map<String, dynamic> bodyContent = json.decode(response.body);
         if (bodyContent['resultCode'] == '00047') {
           ///TODO: Lay accessToken tu response api va gan vao globalToken
-          final user = User.fromJson(bodyContent);
-          accessToken = user.accessToken!;
+          accessToken = bodyContent['accessToken'];
           print("Access token: $accessToken");
-          return User.fromJson(bodyContent);
+          return bodyContent;
         } else {
           print("Đăng nhập thất bại: ${bodyContent['resultMessage']['en']}");
         }
@@ -33,6 +32,6 @@ class LoginApiService {
     } catch (e) {
       print("Đã xảy ra lỗi khi gọi API: $e");
     }
-    return null;
+    return {};
   }
 }
