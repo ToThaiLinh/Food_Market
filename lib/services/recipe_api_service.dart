@@ -116,7 +116,7 @@ class RecipeApiService {
   }
 
   Future<List<Map<String, dynamic>>?> getAllRecipes() async {
-    final url = Uri.parse('$_baseUrl/recipe');
+    final url = Uri.parse('$_baseUrl/recipe/all');
     try {
       final response = await http.get(
         url,

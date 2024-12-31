@@ -139,7 +139,7 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.family_restroom_outlined),
             activeIcon: Icon(Icons.family_restroom),
-            label: 'Lịch',
+            label: 'Gia đình',
           ),
         ],
         currentIndex: _currentIndex,
@@ -170,51 +170,12 @@ class _HomeContentState extends State<HomeContent> {
   }
   List<Map<String, dynamic>> _shoppingItems = [];
   List<Map<String, dynamic>> _expiringFoods = [];
-  List<Map<String, dynamic>> _mealRecipes = [];
 
   @override
   void initState() {
     super.initState();
     _loadShoppingItems();
     _loadExpiringFoods();
-    _loadMealRecipes();
-  }
-
-  void _loadMealRecipes() {
-    setState(() {
-      _mealRecipes = [
-        {
-          'name': 'Cơm chiên hải sản',
-          'description': 'Món cơm chiên với tôm, mực, rau củ.',
-          'image': Assets.images.imgMonan1.path,
-          'cookingTime': '30 phút',
-        },
-        {
-          'name': 'Canh chua cá lóc',
-          'description': 'Món canh chua đậm đà với cá lóc và rau.',
-          'image': Assets.images.imgMonan1.path,
-          'cookingTime': '25 phút',
-        },
-        {
-          'name': 'Gỏi cuốn tôm thịt',
-          'description': 'Món gỏi cuốn tươi ngon với tôm và thịt.',
-          'image': Assets.images.imgMonan1.path,
-          'cookingTime': '20 phút',
-        },
-        {
-          'name': 'Bò lúc lắc',
-          'description': 'Thịt bò xào với ớt chuông và hành tây.',
-          'image': Assets.images.imgMonan1.path,
-          'cookingTime': '15 phút',
-        },
-        {
-          'name': 'Bún thịt nướng',
-          'description': 'Bún ăn kèm thịt nướng và nước mắm.',
-          'image': Assets.images.imgMonan1.path,
-          'cookingTime': '40 phút',
-        },
-      ];
-    });
   }
 
   void _loadExpiringFoods() {
@@ -458,7 +419,9 @@ class _HomeContentState extends State<HomeContent> {
                   ).then((_) {
                     // Refresh recipe list after creation
                     if (mounted) {
-                      setState(() {});
+                      setState(() {
+                        widget.onNavigateToTab(0);
+                      });
                     }
                   });
                 },
@@ -469,15 +432,15 @@ class _HomeContentState extends State<HomeContent> {
           SizedBox(height: 16),
           Container(
             height: 200,
-            child: _mealRecipes.isEmpty
+            child: recipes.isEmpty
                 ? Center(
               child: Text('Chưa có công thức nào'),
             )
                 : ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: _mealRecipes.length,
+              itemCount: recipes.length,
               itemBuilder: (context, index) {
-                final recipe = _mealRecipes[index];
+                final recipe = recipes[index];
                 return GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -485,8 +448,7 @@ class _HomeContentState extends State<HomeContent> {
                       MaterialPageRoute(
                         builder: (context) => MealRecipePage(
                           mealName: recipe['name'] ?? 'Không có tên',
-                          recipeDetails: recipe['description'] ?? 'Không có mô tả',
-                          cookingTime: recipe['cookingTime'] ?? 'Không rõ thời gian',
+                          recipeDetails: recipe['htmlContent'] ?? 'Không có mô tả',
                         ),
                       ),
                     );
@@ -497,7 +459,7 @@ class _HomeContentState extends State<HomeContent> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       image: DecorationImage(
-                        image: AssetImage(recipe['image']),
+                        image: AssetImage(recipe['image'] ?? 'assets/default_image.png'), // Cung cấp hình ảnh mặc định
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -530,21 +492,13 @@ class _HomeContentState extends State<HomeContent> {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            recipe['description'] ?? 'Không có mô tả',
+                            recipe['htmlContent'] ?? 'Không có mô tả',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 12,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            recipe['cookingTime'] ?? 'Không rõ thời gian',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 12,
-                            ),
                           ),
                         ],
                       ),

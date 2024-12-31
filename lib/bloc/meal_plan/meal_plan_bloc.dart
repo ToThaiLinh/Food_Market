@@ -1,18 +1,21 @@
 // blocs/meal_plan_bloc.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../models/plan.dart';
 import '../../services/meal_plan_service.dart';
 import 'meal_plan_event.dart';
 import 'meal_plan_state.dart';
 
 class MealPlanBloc extends Bloc<MealPlanEvent, MealPlanState> {
   final MealPlanService _mealPlanService;
+  List<MealPlan> _mealPlans = [];
 
   MealPlanBloc(this._mealPlanService) : super(MealPlanInitial()) {
     on<CreateMealPlan>(_onCreateMealPlan);
     on<UpdateMealPlan>(_onUpdateMealPlan);
     on<DeleteMealPlan>(_onDeleteMealPlan);
     on<GetMealPlansByDate>(_onGetMealPlansByDate);
+    on<AddMealPlan>(_onAddMealPlan);
   }
 
   Future<void> _onCreateMealPlan(
@@ -81,5 +84,23 @@ class MealPlanBloc extends Bloc<MealPlanEvent, MealPlanState> {
     } catch (e) {
       emit(MealPlanError(e.toString()));
     }
+  }
+
+  Future<void> _onAddMealPlan(
+      AddMealPlan event,
+      Emitter<MealPlanState> emit,
+      ) async {
+    // Thêm món ăn vào danh sách
+    final newMealPlan = MealPlan(
+      id: event.dish['id'] ?? '', // Cung cấp giá trị mặc định nếu id là null
+      name: event.dish['name'] ?? 'Không có tên', // Cung cấp giá trị mặc định nếu name là null
+      mealType: event.mealType, // mealType không nên null nếu được truyền từ dialog
+      timestamp: '', // Cung cấp giá trị mặc định hoặc lấy từ event nếu cần
+      status: '', // Cung cấp giá trị mặc định hoặc lấy từ event nếu cần
+      userId: '', // Cung cấp giá trị mặc định hoặc lấy từ event nếu cần
+    );
+
+    _mealPlans.add(newMealPlan); // Cập nhật danh sách món ăn
+    emit(MealPlansLoaded(_mealPlans)); // Cập nhật trạng thái
   }
 }

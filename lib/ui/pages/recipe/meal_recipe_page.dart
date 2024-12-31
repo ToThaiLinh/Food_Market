@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 class MealRecipePage extends StatelessWidget {
   final String mealName;
   final String recipeDetails;
-  final String cookingTime;
 
   const MealRecipePage({
     Key? key,
     required this.mealName,
     required this.recipeDetails,
-    required this.cookingTime,
   }) : super(key: key);
 
   @override
@@ -30,11 +28,6 @@ class MealRecipePage extends StatelessWidget {
             SizedBox(height: 16),
             Text(
               'Công thức: $recipeDetails',
-              style: TextStyle(fontSize: 16),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Thời gian nấu: $cookingTime',
               style: TextStyle(fontSize: 16),
             ),
           ],
