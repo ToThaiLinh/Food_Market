@@ -3,6 +3,7 @@ import 'food.dart';
 class MealPlan {
   final String id;
   final String name;
+  final String mealType;
   final String timestamp;
   final String status;
   final Food? food;
@@ -11,6 +12,7 @@ class MealPlan {
   MealPlan({
     required this.id,
     required this.name,
+    required this.mealType,
     required this.timestamp,
     required this.status,
     this.food,
@@ -24,7 +26,7 @@ class MealPlan {
       timestamp: json['timestamp'] ?? "",
       status: json['status'] ?? "",
       food: Food.fromJson(json['foodId']) ?? null,
-      userId: json['userId'] ?? "",
+      userId: json['userId'] ?? "", mealType: '',
     );
   }
 

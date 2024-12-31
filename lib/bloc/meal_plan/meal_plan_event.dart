@@ -13,6 +13,13 @@ class CreateMealPlan extends MealPlanEvent {
   });
 }
 
+class AddMealPlan extends MealPlanEvent {
+  final Map<String, dynamic> dish;
+  final String mealType;
+
+  AddMealPlan({required this.dish, required this.mealType});
+}
+
 class UpdateMealPlan extends MealPlanEvent {
   final String planId;
   final String newFoodName;
@@ -27,10 +34,12 @@ class UpdateMealPlan extends MealPlanEvent {
 
 class DeleteMealPlan extends MealPlanEvent {
   final String planId;
+
   DeleteMealPlan({required this.planId});
 }
 
 class GetMealPlansByDate extends MealPlanEvent {
   final String date;
+
   GetMealPlansByDate({required this.date});
 }

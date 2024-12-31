@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:food/services/recipe_api_service.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -7,22 +8,6 @@ import 'package:intl/date_symbol_data_local.dart';
 import '../../../bloc/meal_plan/meal_plan_bloc.dart';
 import '../../../bloc/meal_plan/meal_plan_event.dart';
 import '../../../bloc/meal_plan/meal_plan_state.dart';
-import '../../../services/meal_plan_service.dart';
-
-
-// class SchedulePage extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return BlocProvider(
-//       create: (context) => MealPlanBloc(
-//         MealPlanService(),
-//       ),
-//       child: MaterialApp( // Hoặc một Navigator nếu cần
-//         home: ScheduleView(), // ScheduleView phải là con của BlocProvider
-//       ),
-//     );
-//   }
-// }
 
 class SchedulePage extends StatefulWidget {
   @override
@@ -32,6 +17,9 @@ class SchedulePage extends StatefulWidget {
 class _SchedulePageState extends State<SchedulePage> {
   DateTime selectedDate = DateTime.now();
   DateTime focusedDate = DateTime.now();
+  final RecipeApiService _apiService = RecipeApiService();
+  List<Map<String, dynamic>> filteredItems = [];
+  List<Map<String, dynamic>> allRecipes = [];
   final Map<String, String> mealTypeMapping = {
     'Bữa sáng': 'breakfast',
     'Bữa trưa': 'lunch',
@@ -52,6 +40,16 @@ class _SchedulePageState extends State<SchedulePage> {
         date: DateFormat('MM/dd/yyyy').format(selectedDate),
       ),
     );
+  }
+
+  void _search(String query) {
+    setState(() {
+      filteredItems = []; // Reset filteredItems
+      filteredItems = allRecipes // Use the actual list of recipes
+          .where((item) =>
+          item['name']!.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
   }
 
   @override
@@ -121,10 +119,10 @@ class _SchedulePageState extends State<SchedulePage> {
             itemBuilder: (context, index) {
               final mealType = mealTypes[index];
 
+              // Lọc các món ăn theo loại
               final dishes = state.mealPlans
-                  .where((plan) => plan.name == mealTypeMapping[mealType])
+                  .where((plan) => plan.mealType == mealType)
                   .toList();
-
 
               return Card(
                 elevation: 4,
@@ -177,7 +175,7 @@ class _SchedulePageState extends State<SchedulePage> {
                             color: Colors.grey[600],
                           ),
                           title: Text(
-                            plan.food!.name,
+                            plan.name, // Sử dụng tên món ăn từ plan
                             style: TextStyle(fontSize: 16),
                           ),
                           trailing: IconButton(
@@ -219,89 +217,136 @@ class _SchedulePageState extends State<SchedulePage> {
 
   void _showAddDishDialog(BuildContext context, String mealType) {
     final TextEditingController controller = TextEditingController();
-
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.8,
+              padding: EdgeInsets.all(16),
+              child: Column(
                 children: [
-                  Icon(Icons.restaurant_menu, color: Color(0xFFBF4E19)),
-                  SizedBox(width: 8),
+                  // Header
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                   Text(
                     'Thêm món ăn cho $mealType',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
-              ),
-              SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  labelText: 'Tên món ăn',
-                  hintText: 'Nhập tên món ăn',
-                  prefixIcon: Icon(Icons.restaurant),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
-              ),
-              SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'Hủy',
-                      style: TextStyle(color: Colors.grey),
+                  SizedBox(height: 16),
+
+                  // Search Box
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: 'Tìm món ăn',
+                      hintText: 'Nhập tên món ăn...',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
                     ),
-                  ),
-                  SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (controller.text.isNotEmpty) {
-                        context.read<MealPlanBloc>().add(
-                          CreateMealPlan(
-                            foodName: controller.text,
-                            timestamp: DateFormat('yyyy-MM-dd')
-                                .format(selectedDate),
-                            name: mealTypeMapping[mealType]!,
-                          ),
-                        );
-                        Navigator.pop(context);
-                      }
+                    onChanged: (value) {
+                      setModalState(() {
+                        _search(value); // Implement your search logic here
+                      });
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFBF4E19),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                  ),
+                  SizedBox(height: 16),
+
+                  // Food List
+                  Expanded(
+                    child: FutureBuilder<List<Map<String, dynamic>>?>(
+                      future: _apiService.getAllRecipes(), // Call to getAllRecipes API
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFFBF4E19),
+                            ),
+                          );
+                        }
+
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error_outline, size: 48, color: Colors.red),
+                                SizedBox(height: 16),
+                                Text('Có lỗi xảy ra: ${snapshot.error}'),
+                              ],
+                            ),
+                          );
+                        }
+
+                        final recipes = controller.text.isEmpty
+                            ? snapshot.data ?? []
+                            : filteredItems; // Use filteredItems for search results
+
+                        if (recipes.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.no_food, size: 48, color: Colors.grey),
+                                SizedBox(height: 16),
+                                Text('Không tìm thấy món ăn nào'),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          itemCount: recipes.length,
+                          itemBuilder: (context, index) {
+                            final recipe = recipes[index];
+                            return Card(
+                              margin: EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ListTile(
+                                title: Text(
+                                  recipe['name']?.toString() ?? 'Không có tên',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                onTap: () {
+                                  context.read<MealPlanBloc>().add(
+                                    AddMealPlan(dish: recipe, mealType: mealType),
+                                  );
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
-                    child: Text('Thêm'),
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
